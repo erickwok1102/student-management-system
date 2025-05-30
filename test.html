@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統測試</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-item { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>興趣班學員管理系統 - 測試頁面</h1>
+    
+    <div id="test-results"></div>
+    
+    <h2>功能測試</h2>
+    <button onclick="testDataManager()">測試數據管理器</button>
+    <button onclick="testStudentManager()">測試學員管理器</button>
+    <button onclick="testClassManager()">測試課堂管理器</button>
+    <button onclick="testApp()">測試主應用程式</button>
+    
+    <script src="js/data.js"></script>
+    <script src="js/students.js"></script>
+    <script src="js/classes.js"></script>
+    <script src="js/attendance.js"></script>
+    <script src="js/statistics.js"></script>
+    <script src="js/app.js"></script>
+    
+    <script>
+        function addTestResult(name, success, message) {
+            const div = document.createElement('div');
+            div.className = `test-item ${success ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${name}:</strong> ${message}`;
+            document.getElementById('test-results').appendChild(div);
+        }
+        
+        function testDataManager() {
+            try {
+                if (typeof DataManager !== 'undefined') {
+                    addTestResult('DataManager 類', true, '已載入');
+                    
+                    if (typeof dataManager !== 'undefined') {
+                        addTestResult('dataManager 實例', true, '已創建');
+                        
+                        // 測試基本功能
+                        const students = dataManager.getStudents();
+                        addTestResult('getStudents()', true, `返回 ${students.length} 個學員`);
+                        
+                        const classes = dataManager.getClasses();
+                        addTestResult('getClasses()', true, `返回 ${classes.length} 個課堂`);
+                        
+                    } else {
+                        addTestResult('dataManager 實例', false, '未創建');
+                    }
+                } else {
+                    addTestResult('DataManager 類', false, '未載入');
+                }
+            } catch (error) {
+                addTestResult('DataManager 測試', false, error.message);
+            }
+        }
+        
+        function testStudentManager() {
+            try {
+                if (typeof StudentManager !== 'undefined') {
+                    addTestResult('StudentManager 類', true, '已載入');
+                    
+                    if (typeof studentManager !== 'undefined') {
+                        addTestResult('studentManager 實例', true, '已創建');
+                    } else {
+                        addTestResult('studentManager 實例', false, '未創建');
+                    }
+                } else {
+                    addTestResult('StudentManager 類', false, '未載入');
+                }
+            } catch (error) {
+                addTestResult('StudentManager 測試', false, error.message);
+            }
+        }
+        
+        function testClassManager() {
+            try {
+                if (typeof ClassManager !== 'undefined') {
+                    addTestResult('ClassManager 類', true, '已載入');
+                    
+                    if (typeof classManager !== 'undefined') {
+                        addTestResult('classManager 實例', true, '已創建');
+                    } else {
+                        addTestResult('classManager 實例', false, '未創建');
+                    }
+                } else {
+                    addTestResult('ClassManager 類', false, '未載入');
+                }
+            } catch (error) {
+                addTestResult('ClassManager 測試', false, error.message);
+            }
+        }
+        
+        function testApp() {
+            try {
+                if (typeof App !== 'undefined') {
+                    addTestResult('App 類', true, '已載入');
+                    
+                    if (typeof window.app !== 'undefined') {
+                        addTestResult('app 實例', true, '已創建');
+                    } else {
+                        addTestResult('app 實例', false, '未創建');
+                    }
+                } else {
+                    addTestResult('App 類', false, '未載入');
+                }
+            } catch (error) {
+                addTestResult('App 測試', false, error.message);
+            }
+        }
+        
+        // 自動運行基本測試
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(() => {
+                testDataManager();
+                testStudentManager();
+                testClassManager();
+                testApp();
+            }, 1000);
+        });
+    </script>
+</body>
+</html> 

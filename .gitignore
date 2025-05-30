@@ -1,0 +1,33 @@
+# 敏感配置文件
+config.js
+secrets.js
+.env
+.env.local
+.env.production
+
+# API Keys 和敏感數據
+**/api-keys.txt
+**/secrets.txt
+**/credentials.json
+
+# 本地存儲數據
+**/data/
+**/backup/
+
+# 系統文件
+.DS_Store
+Thumbs.db
+
+# 編輯器文件
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 日誌文件
+*.log
+logs/
+
+# 臨時文件
+tmp/
+temp/ 
