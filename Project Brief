@@ -1,0 +1,121 @@
+# 興趣班學員管理系統 Project Brief
+
+## 🎯 Project Overview
+開發一個網頁應用程式（PWA），用於管理興趣班的學員資料、出席記錄和課堂安排。
+
+## 👥 Target Users
+- Primary: 興趣班導師/管理員
+- Secondary: 學員/家長 (Phase 2)
+
+## 📋 Core Features
+
+### 1. 學員管理
+#### 必填資料
+- 姓名
+- 所屬班別（家規班/青年班/兒童班）
+
+#### 選填資料（可後補）
+- 出生日期
+- 性別
+- 電郵地址
+- 聯絡電話
+- 緊急聯絡人姓名
+- 緊急聯絡人電話
+
+### 2. 課堂管理
+#### 班別時間表
+- 青年班：16:00 - 17:30
+- 兒童班：17:30 - 19:00
+- 家規班：[時間待定]
+
+#### 功能
+- 設定上課日期（非固定）
+- 課堂備註
+- 每堂人數上限設定
+
+### 3. 點名系統
+- 按班別點名
+- 按日期記錄
+- 出席狀態追蹤
+- 出席率統計
+- 學習時長計算
+
+### 4. 數據管理
+- 與 Google Sheets 同步
+- 數據匯出功能
+- 數據備份
+
+## 🔄 Development Phases
+
+### Phase 1 - MVP (現階段)
+- 基本學員資料管理
+- 課堂時間表
+- 基本點名功能
+- Google Sheets 整合
+- PWA 基本功能
+
+### Phase 2 - Enhanced Features
+- 學員/家長登入系統
+- 自動通知系統（Email/WhatsApp）
+- 相片分享功能
+- 進度報告生成
+- 出席分析報表
+
+### Phase 3 - Advanced Features
+- 自動化通知
+- 付款記錄
+- 課程評價系統
+- 學習進度追蹤
+
+## 💻 Technical Specifications
+
+### Platform
+- Progressive Web App (PWA)
+- 支援所有主要瀏覽器
+- 支援手機/平板/電腦
+
+### Database
+- Primary: Google Sheets (初期)
+- Local Storage (離線功能)
+
+### Authentication
+- 管理員登入
+- Google OAuth (Phase 2)
+
+### Integration
+- Google Sheets API
+- Email Service
+- WhatsApp Business API (Phase 2)
+
+## 📱 User Interface Requirements
+- 響應式設計
+- 手機優先的界面
+- 直觀的操作流程
+- 快速點名介面
+- 清晰的數據展示
+
+## 🔒 Security Requirements
+- 安全的數據存儲
+- 用戶權限管理
+- 數據備份機制
+- 敏感資料加密
+
+## ⚡ Performance Requirements
+- 快速載入時間
+- 離線功能支援
+- 數據實時同步
+- 穩定的運行狀態
+
+## 📈 Success Metrics
+- 系統使用率
+- 點名效率提升
+- 數據準確性
+- 用戶滿意度
+- 管理時間節省
+
+## 🎨 Future Considerations
+- Native Mobile App 開發
+- 多分校管理
+- 進階數據分析
+- 自動化課程管理
+- 整合支付系統

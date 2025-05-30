@@ -608,29 +608,62 @@ class App {
     }
 
     async saveStudent() {
-        const formData = {
-            name: document.getElementById('studentName').value,
-            className: document.getElementById('studentClass').value,
-            phone: document.getElementById('studentPhone').value,
-            email: document.getElementById('studentEmail').value,
-            emergencyContact: document.getElementById('emergencyContact').value,
-            emergencyPhone: document.getElementById('emergencyPhone').value,
-            notes: document.getElementById('studentNotes').value
-        };
-        
-        if (!formData.name || !formData.className) {
-            this.showToast('請填寫必要欄位', 'warning');
-            return;
-        }
-        
         try {
-            await this.studentManager.addStudent(formData);
+            const formData = {
+                name: document.getElementById('studentName').value.trim(),
+                className: document.getElementById('studentClass').value,
+                phone: document.getElementById('studentPhone').value.trim(),
+                email: document.getElementById('studentEmail').value.trim(),
+                emergencyContact: document.getElementById('emergencyContact').value.trim(),
+                emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
+                notes: document.getElementById('studentNotes').value.trim()
+            };
+            
+            console.log('保存學員數據:', formData);
+            
+            // 驗證必要欄位
+            if (!formData.name) {
+                this.showToast('請輸入學員姓名', 'warning');
+                return;
+            }
+            
+            if (!formData.className) {
+                this.showToast('請選擇班別', 'warning');
+                return;
+            }
+            
+            // 檢查班別是否存在
+            const classes = this.classManager.getAllClasses();
+            const classExists = classes.find(c => c.id === formData.className);
+            if (!classExists) {
+                this.showToast('選擇的班別不存在，請重新選擇', 'error');
+                return;
+            }
+            
+            // 添加班別名稱
+            formData.class = formData.className;
+            
+            console.log('開始添加學員...');
+            const newStudent = await this.studentManager.addStudent(formData);
+            console.log('學員添加成功:', newStudent);
+            
+            // 重新渲染學員列表
             this.renderStudents();
+            
+            // 更新選擇框選項
+            this.updateSelectOptions();
+            
+            // 關閉模態框
             this.closeModal('addStudentModal');
-            this.showToast('學員已新增', 'success');
+            
+            // 清空表單
+            this.clearStudentForm();
+            
+            this.showToast('學員已成功新增', 'success');
+            
         } catch (error) {
             console.error('新增學員失敗:', error);
-            this.showToast('新增學員失敗', 'error');
+            this.showToast('新增學員失敗: ' + error.message, 'error');
         }
     }
 
@@ -645,29 +678,117 @@ class App {
     }
 
     async saveClass() {
-        const formData = {
-            name: document.getElementById('className').value,
-            startTime: document.getElementById('classStartTime').value,
-            endTime: document.getElementById('classEndTime').value,
-            dayOfWeek: document.getElementById('classDayOfWeek').value,
-            description: document.getElementById('classDescription').value
-        };
-        
-        if (!formData.name || !formData.startTime || !formData.endTime || !formData.dayOfWeek) {
-            this.showToast('請填寫必要欄位', 'warning');
-            return;
-        }
-        
         try {
-            await this.classManager.addClass(formData);
+            const formData = {
+                name: document.getElementById('className').value.trim(),
+                startTime: document.getElementById('classStartTime').value,
+                endTime: document.getElementById('classEndTime').value,
+                dayOfWeek: document.getElementById('classDayOfWeek').value,
+                description: document.getElementById('classDescription').value.trim()
+            };
+            
+            console.log('保存課堂數據:', formData);
+            
+            if (!formData.name || !formData.startTime || !formData.endTime || !formData.dayOfWeek) {
+                this.showToast('請填寫必要欄位', 'warning');
+                return;
+            }
+            
+            // 檢查時間邏輯
+            if (formData.startTime >= formData.endTime) {
+                this.showToast('結束時間必須晚於開始時間', 'warning');
+                return;
+            }
+            
+            console.log('開始添加課堂...');
+            const newClass = await this.classManager.addClass(formData);
+            console.log('課堂添加成功:', newClass);
+            
             this.renderClasses();
             this.updateSelectOptions();
             this.closeModal('addClassModal');
-            this.showToast('課堂已新增', 'success');
+            this.clearClassForm();
+            this.showToast('課堂已成功新增', 'success');
+            
         } catch (error) {
             console.error('新增課堂失敗:', error);
-            this.showToast('新增課堂失敗', 'error');
+            this.showToast('新增課堂失敗: ' + error.message, 'error');
         }
+    }
+
+    // 編輯課堂
+    editClass(classId) {
+        const classData = this.classManager.getClass(classId);
+        if (!classData) {
+            this.showToast('找不到課堂資料', 'error');
+            return;
+        }
+        
+        // 填充表單
+        document.getElementById('className').value = classData.name;
+        document.getElementById('classStartTime').value = classData.startTime;
+        document.getElementById('classEndTime').value = classData.endTime;
+        document.getElementById('classDayOfWeek').value = classData.dayOfWeek;
+        document.getElementById('classDescription').value = classData.description || '';
+        
+        // 設置編輯模式
+        this.editingClassId = classId;
+        
+        this.showModal('addClassModal');
+    }
+
+    // 刪除課堂
+    async deleteClass(classId) {
+        const classData = this.classManager.getClass(classId);
+        if (!classData) {
+            this.showToast('找不到課堂資料', 'error');
+            return;
+        }
+        
+        const studentsInClass = this.studentManager.getStudentsByClass(classId);
+        let confirmMessage = `確定要刪除課堂「${classData.name}」嗎？`;
+        
+        if (studentsInClass.length > 0) {
+            confirmMessage += `\n\n注意：此課堂有 ${studentsInClass.length} 位學員，刪除後相關數據將一併刪除。`;
+        }
+        
+        if (confirm(confirmMessage)) {
+            try {
+                await this.classManager.deleteClass(classId);
+                this.renderClasses();
+                this.renderStudents(); // 重新渲染學員列表
+                this.updateSelectOptions();
+                this.showToast('課堂已刪除', 'success');
+            } catch (error) {
+                console.error('刪除課堂失敗:', error);
+                this.showToast('刪除課堂失敗', 'error');
+            }
+        }
+    }
+
+    // 管理課堂學員
+    manageClassStudents(classId) {
+        const classData = this.classManager.getClass(classId);
+        if (!classData) {
+            this.showToast('找不到課堂資料', 'error');
+            return;
+        }
+        
+        const students = this.studentManager.getStudentsByClass(classId);
+        
+        let message = `課堂：${classData.name}\n`;
+        message += `時間：${this.getDayName(classData.dayOfWeek)} ${classData.startTime}-${classData.endTime}\n\n`;
+        
+        if (students.length === 0) {
+            message += '此課堂目前沒有學員。';
+        } else {
+            message += `學員名單 (${students.length}人)：\n`;
+            students.forEach((student, index) => {
+                message += `${index + 1}. ${student.name}\n`;
+            });
+        }
+        
+        alert(message);
     }
 
     // 搜尋功能
@@ -819,6 +940,97 @@ class App {
             }
         }
     }
+
+    // 快速日期選擇功能
+    selectAttendanceDate(offset) {
+        const classId = document.getElementById('attendanceClass').value;
+        if (!classId) {
+            this.showToast('請先選擇班別', 'warning');
+            return;
+        }
+        
+        const classData = this.classManager.getClass(classId);
+        if (!classData) {
+            this.showToast('找不到課堂資料', 'error');
+            return;
+        }
+        
+        const today = new Date();
+        const targetDate = this.calculateClassDate(today, classData.dayOfWeek, offset);
+        const dateString = targetDate.toISOString().split('T')[0];
+        
+        // 設置日期
+        document.getElementById('attendanceDate').value = dateString;
+        
+        // 更新顯示
+        const displayDate = this.formatDateDisplay(targetDate, offset);
+        document.getElementById('selectedDateDisplay').textContent = displayDate;
+        
+        // 載入點名列表
+        this.loadAttendanceList();
+    }
+    
+    calculateClassDate(baseDate, dayOfWeek, offset) {
+        const today = new Date(baseDate);
+        const currentDay = today.getDay();
+        const targetDay = parseInt(dayOfWeek);
+        
+        // 計算到目標星期幾的天數差
+        let daysToTarget = targetDay - currentDay;
+        
+        // 根據offset調整
+        if (offset === 0) {
+            // 今天：如果今天就是上課日，就是今天；否則找最近的上課日
+            if (daysToTarget < 0) {
+                daysToTarget += 7; // 下週的上課日
+            }
+        } else if (offset === -1) {
+            // 上一堂：往前一週
+            if (daysToTarget > 0) {
+                daysToTarget -= 7;
+            } else if (daysToTarget === 0) {
+                daysToTarget = -7;
+            } else {
+                daysToTarget -= 7;
+            }
+        } else if (offset === 1) {
+            // 下一堂：往後找
+            if (daysToTarget <= 0) {
+                daysToTarget += 7;
+            }
+        } else if (offset === 2) {
+            // 下下堂：再往後一週
+            if (daysToTarget <= 0) {
+                daysToTarget += 14;
+            } else {
+                daysToTarget += 7;
+            }
+        }
+        
+        const targetDate = new Date(today);
+        targetDate.setDate(today.getDate() + daysToTarget);
+        return targetDate;
+    }
+    
+    formatDateDisplay(date, offset) {
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric',
+            weekday: 'long'
+        };
+        const dateStr = date.toLocaleDateString('zh-TW', options);
+        
+        let label = '';
+        switch (offset) {
+            case -1: label = '(上一堂)'; break;
+            case 0: label = '(今天)'; break;
+            case 1: label = '(下一堂)'; break;
+            case 2: label = '(下下堂)'; break;
+        }
+        
+        return `${dateStr} ${label}`;
+    }
 }
 
 // 全局函數 - 為了與HTML事件處理器兼容
@@ -915,6 +1127,42 @@ function testConnection() {
 function hideToast() {
     if (window.app) {
         app.hideToast();
+    }
+}
+
+function selectAttendanceDate(offset) {
+    if (window.app) {
+        app.selectAttendanceDate(offset);
+    }
+}
+
+function editClass(classId) {
+    if (window.app) {
+        app.editClass(classId);
+    }
+}
+
+function deleteClass(classId) {
+    if (window.app) {
+        app.deleteClass(classId);
+    }
+}
+
+function manageClassStudents(classId) {
+    if (window.app) {
+        app.manageClassStudents(classId);
+    }
+}
+
+function editStudent(studentId) {
+    if (window.app) {
+        app.editStudent(studentId);
+    }
+}
+
+function deleteStudent(studentId) {
+    if (window.app) {
+        app.deleteStudent(studentId);
     }
 }
 
