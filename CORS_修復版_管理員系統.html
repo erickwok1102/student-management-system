@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理員系統 - CORS修復版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); padding: 20px; border-radius: 15px; margin-bottom: 20px; text-align: center; }
+        .header h1 { color: white; font-size: 2em; margin-bottom: 10px; }
+        .login-container { max-width: 400px; margin: 50px auto; background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; transition: all 0.3s; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .tabs { display: flex; margin-bottom: 20px; }
+        .tab { flex: 1; padding: 15px; background: rgba(255,255,255,0.1); color: white; border: none; cursor: pointer; border-radius: 10px 10px 0 0; margin-right: 5px; }
+        .tab.active { background: white; color: #333; }
+        .tab-content { background: white; padding: 20px; border-radius: 0 15px 15px 15px; }
+        .student-list { max-height: 400px; overflow-y: auto; }
+        .student-item { padding: 15px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; }
+        .notification { position: fixed; top: 20px; right: 20px; padding: 15px 25px; border-radius: 8px; color: white; font-weight: bold; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .notification.warning { background: #ffc107; color: #333; }
+        .notification.show { opacity: 1; }
+        .connection-status { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-left: 10px; }
+        .connection-status.connected { background: #28a745; }
+        .connection-status.disconnected { background: #dc3545; }
+        .settings-panel { background: #f8f9fa; padding: 20px; border-radius: 10px; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div id="loginScreen" class="login-container">
+        <h2 style="text-align: center; margin-bottom: 30px;">🔐 管理員登入</h2>
+        <div class="form-group">
+            <label>密碼:</label>
+            <input type="password" id="loginPassword" placeholder="請輸入管理員密碼">
+        </div>
+        <button class="btn btn-primary" onclick="login()" style="width: 100%;">登入</button>
+    </div>
+
+    <div id="mainSystem" style="display: none;">
+        <div class="container">
+            <div class="header">
+                <h1>👨‍💼 管理員系統</h1>
+                <p>學員管理 & Google Sheets 同步 (CORS修復版)</p>
+                <button class="btn btn-danger" onclick="logout()" style="float: right;">🚪 登出</button>
+                <div style="clear: both;"></div>
+            </div>
+
+            <!-- 設定面板 -->
+            <div class="settings-panel">
+                <h3>🔧 系統設定</h3>
+                <div style="display: flex; gap: 20px; margin-top: 15px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label>Google Sheets API Key:</label>
+                        <input type="text" id="apiKeyInput" placeholder="請輸入 API Key">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Google Sheets ID:</label>
+                        <input type="text" id="sheetIdInput" placeholder="請輸入 Sheet ID">
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label>Apps Script URL:</label>
+                        <input type="text" id="appsScriptInput" placeholder="請輸入 Apps Script URL">
+                    </div>
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" onclick="saveSettings()">💾 儲存設定</button>
+                    <button class="btn btn-success" onclick="testConnection()">🔗 測試連接</button>
+                    <span id="connectionStatus">連接狀態: <span class="connection-status disconnected"></span></span>
+                </div>
+            </div>
+
+            <!-- 標籤頁 -->
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('students')">👥 學員管理</button>
+                <button class="tab" onclick="showTab('sync')">☁️ 雲端同步</button>
+            </div>
+
+            <!-- 學員管理 -->
+            <div id="studentsTab" class="tab-content">
+                <h3>👥 學員管理</h3>
+                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>學員姓名 *:</label>
+                        <input type="text" id="studentName" placeholder="請輸入學員姓名">
+                    </div>
+                    <div class="form-group">
+                        <label>別名/英文名:</label>
+                        <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
+                    </div>
+                    <div class="form-group">
+                        <label>班別:</label>
+                        <select id="studentClass">
+                            <option value="">請選擇班別</option>
+                            <option value="數學班">數學班</option>
+                            <option value="英文班">英文班</option>
+                            <option value="中文班">中文班</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label>電話:</label>
+                        <input type="text" id="studentPhone" placeholder="電話號碼">
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="studentEmail" placeholder="電子信箱">
+                    </div>
+                    <div class="form-group">
+                        <label>狀態:</label>
+                        <select id="studentStatus">
+                            <option value="在讀">在讀</option>
+                            <option value="休學">休學</option>
+                            <option value="畢業">畢業</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>備註:</label>
+                    <textarea id="studentRemarks" placeholder="其他備註資訊"></textarea>
+                </div>
+                <button class="btn btn-success" onclick="addStudent()">➕ 新增學員</button>
+                <button class="btn btn-primary" onclick="loadStudentData()">🔄 重新載入</button>
+                
+                <div class="student-list" id="studentList"></div>
+            </div>
+
+            <!-- 雲端同步 -->
+            <div id="syncTab" class="tab-content" style="display: none;">
+                <h3>☁️ 雲端同步</h3>
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                        <h4>📤 上傳到雲端</h4>
+                        <button class="btn btn-success" onclick="syncStudentsToCloud()" style="width: 100%; margin-bottom: 10px;">☁️ 同步學員到雲端</button>
+                        <button class="btn btn-success" onclick="syncAllToCloud()" style="width: 100%;">📤 同步所有數據</button>
+                    </div>
+                    <div style="background: #f8f9fa; padding: 20px; border-radius: 10px;">
+                        <h4>📥 從雲端載入</h4>
+                        <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 10px;">📥 從雲端載入</button>
+                        <button class="btn btn-primary" onclick="loadAllFromCloud()" style="width: 100%;">📥 載入所有數據</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // 全局變數
+        let students = [];
+        let apiKey = '';
+        let spreadsheetId = '';
+        let appsScriptUrl = '';
+
+        // 登入功能
+        function login() {
+            const password = document.getElementById('loginPassword').value;
+            if (password === 'admin123') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('mainSystem').style.display = 'block';
+                loadSettings();
+                loadStudentData();
+            } else {
+                showNotification('密碼錯誤', 'error');
+            }
+        }
+
+        function logout() {
+            document.getElementById('loginScreen').style.display = 'block';
+            document.getElementById('mainSystem').style.display = 'none';
+            document.getElementById('loginPassword').value = '';
+        }
+
+        // 標籤頁切換
+        function showTab(tabName) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+        }
+
+        // 通知系統
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+
+        // 設定管理
+        function saveSettings() {
+            apiKey = document.getElementById('apiKeyInput').value;
+            spreadsheetId = document.getElementById('sheetIdInput').value;
+            appsScriptUrl = document.getElementById('appsScriptInput').value;
+            
+            localStorage.setItem('apiKey', apiKey);
+            localStorage.setItem('spreadsheetId', spreadsheetId);
+            localStorage.setItem('appsScriptUrl', appsScriptUrl);
+            
+            showNotification('設定已儲存');
+        }
+
+        function loadSettings() {
+            apiKey = localStorage.getItem('apiKey') || '';
+            spreadsheetId = localStorage.getItem('spreadsheetId') || '';
+            appsScriptUrl = localStorage.getItem('appsScriptUrl') || '';
+            
+            document.getElementById('apiKeyInput').value = apiKey;
+            document.getElementById('sheetIdInput').value = spreadsheetId;
+            document.getElementById('appsScriptInput').value = appsScriptUrl;
+        }
+
+        // 測試連接
+        async function testConnection() {
+            if (!apiKey || !spreadsheetId || !appsScriptUrl) {
+                showNotification('請先填寫所有設定', 'error');
+                return;
+            }
+
+            try {
+                // 測試 Apps Script
+                const response = await fetch(appsScriptUrl, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                
+                if (response.ok) {
+                    document.querySelector('.connection-status').className = 'connection-status connected';
+                    showNotification('連接成功！');
+                } else {
+                    throw new Error('連接失敗');
+                }
+            } catch (error) {
+                document.querySelector('.connection-status').className = 'connection-status disconnected';
+                showNotification('連接失敗: ' + error.message, 'error');
+            }
+        }
+
+        // 學員管理
+        function addStudent() {
+            const name = document.getElementById('studentName').value;
+            if (!name) {
+                showNotification('請輸入學員姓名', 'error');
+                return;
+            }
+
+            const student = {
+                id: Date.now().toString(),
+                name: name,
+                nickname: document.getElementById('studentNickname').value,
+                class: document.getElementById('studentClass').value,
+                phone: document.getElementById('studentPhone').value,
+                email: document.getElementById('studentEmail').value,
+                status: document.getElementById('studentStatus').value,
+                remarks: document.getElementById('studentRemarks').value,
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            students.push(student);
+            localStorage.setItem('studentData', JSON.stringify(students));
+            loadStudentData();
+            clearForm();
+            showNotification('學員已新增');
+        }
+
+        function clearForm() {
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentNickname').value = '';
+            document.getElementById('studentClass').value = '';
+            document.getElementById('studentPhone').value = '';
+            document.getElementById('studentEmail').value = '';
+            document.getElementById('studentStatus').value = '在讀';
+            document.getElementById('studentRemarks').value = '';
+        }
+
+        function loadStudentData() {
+            const data = localStorage.getItem('studentData');
+            if (data) {
+                students = JSON.parse(data);
+            }
+            displayStudents();
+        }
+
+        function displayStudents() {
+            const list = document.getElementById('studentList');
+            list.innerHTML = '';
+
+            students.forEach(student => {
+                const item = document.createElement('div');
+                item.className = 'student-item';
+                item.innerHTML = `
+                    <div>
+                        <strong>${student.name}</strong> ${student.nickname ? `(${student.nickname})` : ''}
+                        <br>
+                        <small>班別: ${student.class} | 狀態: ${student.status} | 創建: ${student.createdAt}</small>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">🗑️ 刪除</button>
+                    </div>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        function deleteStudent(id) {
+            if (confirm('確定要刪除此學員嗎？')) {
+                students = students.filter(s => s.id !== id);
+                localStorage.setItem('studentData', JSON.stringify(students));
+                loadStudentData();
+                showNotification('學員已刪除');
+            }
+        }
+
+        // 雲端同步 - 修復版
+        async function syncStudentsToCloud() {
+            if (!appsScriptUrl) {
+                showNotification('請先設置 Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                const studentRows = [
+                    ['ID', '姓名', '別名', '班別', '電話', 'Email', '狀態', '備註', '創建日期']
+                ];
+                
+                students.forEach(student => {
+                    studentRows.push([
+                        student.id,
+                        student.name,
+                        student.nickname || '',
+                        student.class || '',
+                        student.phone || '',
+                        student.email || '',
+                        student.status || '在讀',
+                        student.remarks || '',
+                        student.createdAt || ''
+                    ]);
+                });
+
+                const response = await fetch(appsScriptUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        action: 'update',
+                        worksheet: '學員資料',
+                        data: studentRows
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('學員資料已同步到雲端');
+                } else {
+                    throw new Error(result.message || '同步失敗');
+                }
+            } catch (error) {
+                console.error('同步錯誤:', error);
+                showNotification('同步失敗: ' + error.message, 'error');
+            }
+        }
+
+        async function syncAllToCloud() {
+            await syncStudentsToCloud();
+        }
+
+        async function loadFromCloud() {
+            if (!apiKey || !spreadsheetId) {
+                showNotification('請先設置 API Key 和 Sheet ID', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/學員資料!A:I?key=${apiKey}`);
+                const data = await response.json();
+                
+                if (data.values && data.values.length > 1) {
+                    const newStudents = [];
+                    
+                    for (let i = 1; i < data.values.length; i++) {
+                        const row = data.values[i];
+                        if (row[0]) {
+                            newStudents.push({
+                                id: row[0],
+                                name: row[1] || '',
+                                nickname: row[2] || '',
+                                class: row[3] || '',
+                                phone: row[4] || '',
+                                email: row[5] || '',
+                                status: row[6] || '在讀',
+                                remarks: row[7] || '',
+                                createdAt: row[8] || new Date().toLocaleDateString()
+                            });
+                        }
+                    }
+                    
+                    students = newStudents;
+                    localStorage.setItem('studentData', JSON.stringify(students));
+                    loadStudentData();
+                    showNotification('學員資料已從雲端載入');
+                }
+            } catch (error) {
+                showNotification('載入失敗: ' + error.message, 'error');
+            }
+        }
+
+        async function loadAllFromCloud() {
+            await loadFromCloud();
+        }
+
+        // 初始化
+        window.onload = function() {
+            loadSettings();
+            loadStudentData();
+        };
+    </script>
+</body>
+</html> 

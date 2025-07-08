@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>數據導出導入工具</title>
+    <style>
+        body { font-family: system-ui; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .section { margin-bottom: 30px; padding: 20px; border: 1px solid #dee2e6; border-radius: 8px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; margin: 10px 5px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: black; }
+        textarea { width: 100%; height: 200px; padding: 10px; border: 1px solid #ccc; border-radius: 4px; font-family: monospace; font-size: 12px; }
+        .alert { padding: 15px; margin: 15px 0; border-radius: 4px; }
+        .alert-info { background: #d1ecf1; border: 1px solid #bee5eb; color: #0c5460; }
+        .alert-success { background: #d4edda; border: 1px solid #c3e6cb; color: #155724; }
+        .alert-warning { background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin: 15px 0; }
+        .stat-card { background: #f8f9fa; padding: 15px; border-radius: 5px; text-align: center; }
+        .stat-number { font-size: 24px; font-weight: bold; color: #007bff; }
+        .stat-label { font-size: 14px; color: #6c757d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 數據導出導入工具</h1>
+        <p>用這個工具在不同設備間轉移你的學員管理數據</p>
+
+        <!-- 當前數據狀態 -->
+        <div class="section">
+            <h3>📊 當前數據狀態</h3>
+            <div class="stats" id="current-stats">
+                <div class="stat-card">
+                    <div class="stat-number" id="student-count">0</div>
+                    <div class="stat-label">學員</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="class-count">0</div>
+                    <div class="stat-label">班組</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="attendance-count">0</div>
+                    <div class="stat-label">出席記錄</div>
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="refreshStats()">🔄 刷新統計</button>
+        </div>
+
+        <!-- 導出數據 -->
+        <div class="section">
+            <h3>📤 導出數據</h3>
+            <div class="alert alert-info">
+                <strong>使用方法：</strong>
+                <ol>
+                    <li>點擊「導出數據」按鈕</li>
+                    <li>複製下方文字框中的所有內容</li>
+                    <li>透過 WhatsApp、Email 等方式發送到其他設備</li>
+                </ol>
+            </div>
+            <button class="btn btn-primary" onclick="exportData()">📤 導出數據</button>
+            <button class="btn btn-warning" onclick="clearExportArea()">🗑️ 清空</button>
+            <br><br>
+            <textarea id="export-area" placeholder="導出的數據會顯示在這裡..." readonly></textarea>
+        </div>
+
+        <!-- 導入數據 -->
+        <div class="section">
+            <h3>📥 導入數據</h3>
+            <div class="alert alert-warning">
+                <strong>⚠️ 注意：</strong>導入數據會<strong>覆蓋</strong>當前所有數據，請先確認備份！
+            </div>
+            <textarea id="import-area" placeholder="將導出的數據貼上到這裡..."></textarea>
+            <br><br>
+            <button class="btn btn-success" onclick="importData()">📥 導入數據</button>
+            <button class="btn btn-warning" onclick="clearImportArea()">🗑️ 清空</button>
+        </div>
+
+        <!-- 清空數據 -->
+        <div class="section">
+            <h3>🗑️ 清空數據</h3>
+            <div class="alert alert-warning">
+                <strong>⚠️ 危險操作：</strong>這會刪除所有本地數據，無法復原！
+            </div>
+            <button class="btn btn-warning" onclick="clearAllData()">🗑️ 清空所有數據</button>
+        </div>
+
+        <!-- 結果顯示 -->
+        <div id="result-message"></div>
+    </div>
+
+    <script>
+        // 檢查數據版本
+        const DATA_VERSIONS = [
+            { key: 'wp_students_v3', name: '學員數據 (WordPress版)' },
+            { key: 'wp_classes_v3', name: '班組數據 (WordPress版)' },
+            { key: 'wp_attendance_v3', name: '出席數據 (WordPress版)' },
+            { key: 'gs_students_v1', name: '學員數據 (Google Sheets版)' },
+            { key: 'gs_classes_v1', name: '班組數據 (Google Sheets版)' },
+            { key: 'gs_attendance_v1', name: '出席數據 (Google Sheets版)' }
+        ];
+
+        // 頁面載入時刷新統計
+        document.addEventListener('DOMContentLoaded', refreshStats);
+
+        // 刷新統計
+        function refreshStats() {
+            let totalStudents = 0;
+            let totalClasses = 0;
+            let totalAttendance = 0;
+
+            // 檢查所有版本的數據
+            DATA_VERSIONS.forEach(version => {
+                const data = localStorage.getItem(version.key);
+                if (data) {
+                    try {
+                        const parsed = JSON.parse(data);
+                        if (version.key.includes('students')) {
+                            totalStudents += Array.isArray(parsed) ? parsed.length : 0;
+                        } else if (version.key.includes('classes')) {
+                            totalClasses += Array.isArray(parsed) ? parsed.length : 0;
+                        } else if (version.key.includes('attendance')) {
+                            totalAttendance += Object.keys(parsed).length || 0;
+                        }
+                    } catch (e) {
+                        console.error('解析數據失敗:', version.key, e);
+                    }
+                }
+            });
+
+            document.getElementById('student-count').textContent = totalStudents;
+            document.getElementById('class-count').textContent = totalClasses;
+            document.getElementById('attendance-count').textContent = totalAttendance;
+        }
+
+        // 導出數據
+        function exportData() {
+            const exportData = {
+                timestamp: new Date().toISOString(),
+                version: '1.0',
+                data: {}
+            };
+
+            // 收集所有數據
+            DATA_VERSIONS.forEach(version => {
+                const data = localStorage.getItem(version.key);
+                if (data) {
+                    try {
+                        exportData.data[version.key] = JSON.parse(data);
+                    } catch (e) {
+                        console.error('導出數據失敗:', version.key, e);
+                    }
+                }
+            });
+
+            // 轉換為 JSON 字符串
+            const jsonString = JSON.stringify(exportData, null, 2);
+            document.getElementById('export-area').value = jsonString;
+
+            showMessage('✅ 數據導出完成！請複製上方文字框中的內容。', 'success');
+        }
+
+        // 導入數據
+        function importData() {
+            const importText = document.getElementById('import-area').value.trim();
+            
+            if (!importText) {
+                showMessage('❌ 請先貼上要導入的數據！', 'warning');
+                return;
+            }
+
+            try {
+                const importData = JSON.parse(importText);
+                
+                // 驗證數據格式
+                if (!importData.data || typeof importData.data !== 'object') {
+                    throw new Error('數據格式不正確');
+                }
+
+                // 確認導入
+                if (!confirm('確定要導入數據嗎？這會覆蓋當前所有數據！')) {
+                    return;
+                }
+
+                // 導入數據
+                let importCount = 0;
+                Object.keys(importData.data).forEach(key => {
+                    localStorage.setItem(key, JSON.stringify(importData.data[key]));
+                    importCount++;
+                });
+
+                refreshStats();
+                showMessage(`✅ 成功導入 ${importCount} 項數據！`, 'success');
+                
+                // 清空導入區域
+                document.getElementById('import-area').value = '';
+
+            } catch (e) {
+                console.error('導入失敗:', e);
+                showMessage('❌ 導入失敗：數據格式不正確或已損壞！', 'warning');
+            }
+        }
+
+        // 清空所有數據
+        function clearAllData() {
+            if (!confirm('確定要清空所有數據嗎？此操作無法復原！')) {
+                return;
+            }
+
+            if (!confirm('最後確認：真的要刪除所有學員、班組和出席數據嗎？')) {
+                return;
+            }
+
+            // 刪除所有相關數據
+            DATA_VERSIONS.forEach(version => {
+                localStorage.removeItem(version.key);
+            });
+
+            // 也刪除 API 設定
+            localStorage.removeItem('gs_api_key');
+            localStorage.removeItem('gs_sheet_id');
+
+            refreshStats();
+            showMessage('✅ 所有數據已清空！', 'success');
+        }
+
+        // 清空文字區域
+        function clearExportArea() {
+            document.getElementById('export-area').value = '';
+        }
+
+        function clearImportArea() {
+            document.getElementById('import-area').value = '';
+        }
+
+        // 顯示訊息
+        function showMessage(message, type = 'info') {
+            const resultDiv = document.getElementById('result-message');
+            const alertClass = `alert-${type}`;
+            
+            resultDiv.innerHTML = `<div class="alert ${alertClass}">${message}</div>`;
+            
+            // 3秒後自動隱藏
+            setTimeout(() => {
+                resultDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        // 自動選擇文字框內容
+        document.getElementById('export-area').addEventListener('click', function() {
+            this.select();
+        });
+    </script>
+</body>
+</html> 

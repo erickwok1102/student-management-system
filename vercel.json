@@ -1,0 +1,17 @@
+{
+  "functions": {
+    "api/**/*.js": {
+      "runtime": "nodejs18.x"
+    }
+  },
+  "env": {
+    "GOOGLE_SHEET_ID": "1paCFI-QxJ3HjTrA4IOnZFQjuw2I7jh8KkTPiNSbfcoo",
+    "GOOGLE_CLIENT_EMAIL": "@google_client_email",
+    "GOOGLE_PRIVATE_KEY": "@google_private_key"
+  },
+  "build": {
+    "env": {
+      "GOOGLE_SHEET_ID": "1paCFI-QxJ3HjTrA4IOnZFQjuw2I7jh8KkTPiNSbfcoo"
+    }
+  }
+} 

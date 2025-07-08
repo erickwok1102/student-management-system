@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>興趣班學員管理系統</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- 頂部導航 -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="fas fa-graduation-cap"></i>
+                    <div class="logo-text">
+                        <h1>興趣班學員管理系統</h1>
+                        <p>Student Management System</p>
+                    </div>
+                </div>
+                <button class="menu-toggle" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 側邊導航 -->
+        <nav class="sidebar" id="sidebar">
+            <div class="nav-item active" onclick="switchTab('attendance')">
+                <i class="fas fa-clipboard-check"></i>
+                <span>點名系統</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('students')">
+                <i class="fas fa-users"></i>
+                <span>學員管理</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('classes')">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>課堂管理</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('statistics')">
+                <i class="fas fa-chart-bar"></i>
+                <span>統計報表</span>
+            </div>
+            <div class="nav-item" onclick="switchTab('settings')">
+                <i class="fas fa-cog"></i>
+                <span>系統設定</span>
+            </div>
+        </nav>
+
+        <!-- 主內容區域 -->
+        <main class="main-content">
+            <!-- 學員管理 -->
+            <section id="students" class="tab-content">
+                <div class="page-header">
+                    <h2><i class="fas fa-users"></i> 學員管理</h2>
+                    <button class="btn btn-primary" onclick="showAddStudentModal()">
+                        <i class="fas fa-plus"></i> 新增學員
+                    </button>
+                </div>
+
+                <div class="search-bar">
+                    <input type="text" id="studentSearch" placeholder="搜尋學員姓名或班別..." onkeyup="filterStudents()">
+                    <i class="fas fa-search"></i>
+                </div>
+
+                <div class="student-grid" id="studentGrid">
+                    <!-- 學員卡片將在這裡動態生成 -->
+                </div>
+            </section>
+
+            <!-- 課堂管理 -->
+            <section id="classes" class="tab-content">
+                <div class="page-header">
+                    <h2><i class="fas fa-chalkboard-teacher"></i> 課堂管理</h2>
+                    <button class="btn btn-primary" onclick="showAddClassModal()">
+                        <i class="fas fa-plus"></i> 新增班組
+                    </button>
+                </div>
+
+
+
+                <div class="class-list" id="classList">
+                    <!-- 課堂列表將在這裡動態生成 -->
+                </div>
+            </section>
+
+            <!-- 點名系統 -->
+            <section id="attendance" class="tab-content active">
+                <div class="page-header">
+                    <h2><i class="fas fa-clipboard-check"></i> 點名系統</h2>
+                </div>
+
+                <div class="attendance-controls">
+                    <div class="form-group">
+                        <label for="attendanceClass">選擇班別</label>
+                        <select id="attendanceClass" onchange="loadAttendanceList()">
+                            <option value="">請選擇班別</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>選擇日期</label>
+                        <div class="date-quick-select">
+                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(-1)">上一堂</button>
+                            <button type="button" class="btn btn-primary" onclick="selectAttendanceDate(0)">今天</button>
+                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(1)">下一堂</button>
+                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(2)">下下堂</button>
+                        </div>
+                        <div class="selected-date">
+                            <span id="selectedDateDisplay">請選擇日期</span>
+                            <input type="hidden" id="attendanceDate" onchange="loadAttendanceList()">
+                        </div>
+                    </div>
+                </div>
+
+
+
+                <div class="attendance-list" id="attendanceList">
+                    <!-- 點名列表將在這裡動態生成 -->
+                </div>
+
+                <div class="attendance-actions" id="attendanceActions" style="display: none;">
+                    <div class="real-time-save-info">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>點名記錄已實時保存</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 統計報表 -->
+            <section id="statistics" class="tab-content">
+                <div class="page-header">
+                    <h2><i class="fas fa-chart-bar"></i> 統計報表</h2>
+                </div>
+
+                <div class="stats-filters">
+                    <div class="form-group">
+                        <label>班別</label>
+                        <select id="statsClass">
+                            <option value="">所有班別</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>開始日期</label>
+                        <input type="date" id="statsStartDate">
+                    </div>
+                    <div class="form-group">
+                        <label>結束日期</label>
+                        <input type="date" id="statsEndDate">
+                    </div>
+                    <button class="btn btn-primary" onclick="generateStats()">
+                        <i class="fas fa-chart-line"></i> 生成報表
+                    </button>
+                </div>
+
+                <div class="stats-overview" id="statsOverview">
+                    <!-- 統計概覽將在這裡顯示 -->
+                </div>
+
+                <div class="stats-charts" id="statsCharts">
+                    <!-- 圖表將在這裡顯示 -->
+                </div>
+            </section>
+
+            <!-- 系統設定 -->
+            <section id="settings" class="tab-content">
+                <div class="page-header">
+                    <h2><i class="fas fa-cog"></i> 系統設定</h2>
+                </div>
+
+                <div class="settings-section">
+                    <h3>數據管理</h3>
+                    <div class="settings-actions">
+                        <button class="btn btn-info" onclick="exportData()">
+                            <i class="fas fa-download"></i> 匯出數據
+                        </button>
+                        <button class="btn btn-warning" onclick="importData()">
+                            <i class="fas fa-upload"></i> 匯入數據
+                        </button>
+                        <button class="btn btn-danger" onclick="clearAllData()">
+                            <i class="fas fa-trash"></i> 清除所有數據
+                        </button>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h3>Google Sheets 同步</h3>
+                    <div class="form-group">
+                        <label>Sheet ID</label>
+                        <input type="text" id="sheetId" placeholder="輸入 Google Sheet ID">
+                    </div>
+                    <div class="form-group">
+                        <label>API Key</label>
+                        <input type="password" id="apiKey" placeholder="輸入 API Key">
+                    </div>
+                    <button class="btn btn-success" onclick="testConnection()">
+                        <i class="fas fa-link"></i> 測試連接
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- 模態框 -->
+        <!-- 新增學員模態框 -->
+        <div id="addStudentModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>新增學員</h3>
+                    <button class="close" onclick="closeModal('addStudentModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="studentForm">
+                        <div class="form-group">
+                            <label>姓名 *</label>
+                            <input type="text" id="studentName" required>
+                        </div>
+                        <div class="form-group">
+                            <label>別名</label>
+                            <input type="text" id="studentNickname" placeholder="可選的別名或簡稱">
+                        </div>
+                        <div class="form-group">
+                            <label>班別 *</label>
+                            <select id="studentClass" required>
+                                <option value="">請選擇班別</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>聯絡電話</label>
+                            <input type="tel" id="studentPhone">
+                        </div>
+                        <div class="form-group">
+                            <label>電子郵件</label>
+                            <input type="email" id="studentEmail">
+                        </div>
+                        <div class="form-group">
+                            <label>緊急聯絡人</label>
+                            <input type="text" id="emergencyContact">
+                        </div>
+                        <div class="form-group">
+                            <label>緊急聯絡電話</label>
+                            <input type="tel" id="emergencyPhone">
+                        </div>
+                        <div class="form-group">
+                            <label>備註</label>
+                            <textarea id="studentNotes" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('addStudentModal')">取消</button>
+                    <button class="btn btn-primary" onclick="saveStudent()">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新增班組模態框 -->
+        <div id="addClassModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>新增班組</h3>
+                    <button class="close" onclick="closeModal('addClassModal')">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <form id="classForm">
+                        <div class="form-group">
+                            <label>班組名稱 *</label>
+                            <input type="text" id="className" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="classStartTime">開始時間 *</label>
+                            <select id="classStartTime" required>
+                                <option value="">請選擇開始時間</option>
+                                <option value="08:00">08:00</option>
+                                <option value="08:15">08:15</option>
+                                <option value="08:30">08:30</option>
+                                <option value="08:45">08:45</option>
+                                <option value="09:00">09:00</option>
+                                <option value="09:15">09:15</option>
+                                <option value="09:30">09:30</option>
+                                <option value="09:45">09:45</option>
+                                <option value="10:00">10:00</option>
+                                <option value="10:15">10:15</option>
+                                <option value="10:30">10:30</option>
+                                <option value="10:45">10:45</option>
+                                <option value="11:00">11:00</option>
+                                <option value="11:15">11:15</option>
+                                <option value="11:30">11:30</option>
+                                <option value="11:45">11:45</option>
+                                <option value="12:00">12:00</option>
+                                <option value="12:15">12:15</option>
+                                <option value="12:30">12:30</option>
+                                <option value="12:45">12:45</option>
+                                <option value="13:00">13:00</option>
+                                <option value="13:15">13:15</option>
+                                <option value="13:30">13:30</option>
+                                <option value="13:45">13:45</option>
+                                <option value="14:00">14:00</option>
+                                <option value="14:15">14:15</option>
+                                <option value="14:30">14:30</option>
+                                <option value="14:45">14:45</option>
+                                <option value="15:00">15:00</option>
+                                <option value="15:15">15:15</option>
+                                <option value="15:30">15:30</option>
+                                <option value="15:45">15:45</option>
+                                <option value="16:00">16:00</option>
+                                <option value="16:15">16:15</option>
+                                <option value="16:30">16:30</option>
+                                <option value="16:45">16:45</option>
+                                <option value="17:00">17:00</option>
+                                <option value="17:15">17:15</option>
+                                <option value="17:30">17:30</option>
+                                <option value="17:45">17:45</option>
+                                <option value="18:00">18:00</option>
+                                <option value="18:15">18:15</option>
+                                <option value="18:30">18:30</option>
+                                <option value="18:45">18:45</option>
+                                <option value="19:00">19:00</option>
+                                <option value="19:15">19:15</option>
+                                <option value="19:30">19:30</option>
+                                <option value="19:45">19:45</option>
+                                <option value="20:00">20:00</option>
+                                <option value="20:15">20:15</option>
+                                <option value="20:30">20:30</option>
+                                <option value="20:45">20:45</option>
+                                <option value="21:00">21:00</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="classEndTime">結束時間 *</label>
+                            <select id="classEndTime" required>
+                                <option value="">請選擇結束時間</option>
+                                <option value="08:15">08:15</option>
+                                <option value="08:30">08:30</option>
+                                <option value="08:45">08:45</option>
+                                <option value="09:00">09:00</option>
+                                <option value="09:15">09:15</option>
+                                <option value="09:30">09:30</option>
+                                <option value="09:45">09:45</option>
+                                <option value="10:00">10:00</option>
+                                <option value="10:15">10:15</option>
+                                <option value="10:30">10:30</option>
+                                <option value="10:45">10:45</option>
+                                <option value="11:00">11:00</option>
+                                <option value="11:15">11:15</option>
+                                <option value="11:30">11:30</option>
+                                <option value="11:45">11:45</option>
+                                <option value="12:00">12:00</option>
+                                <option value="12:15">12:15</option>
+                                <option value="12:30">12:30</option>
+                                <option value="12:45">12:45</option>
+                                <option value="13:00">13:00</option>
+                                <option value="13:15">13:15</option>
+                                <option value="13:30">13:30</option>
+                                <option value="13:45">13:45</option>
+                                <option value="14:00">14:00</option>
+                                <option value="14:15">14:15</option>
+                                <option value="14:30">14:30</option>
+                                <option value="14:45">14:45</option>
+                                <option value="15:00">15:00</option>
+                                <option value="15:15">15:15</option>
+                                <option value="15:30">15:30</option>
+                                <option value="15:45">15:45</option>
+                                <option value="16:00">16:00</option>
+                                <option value="16:15">16:15</option>
+                                <option value="16:30">16:30</option>
+                                <option value="16:45">16:45</option>
+                                <option value="17:00">17:00</option>
+                                <option value="17:15">17:15</option>
+                                <option value="17:30">17:30</option>
+                                <option value="17:45">17:45</option>
+                                <option value="18:00">18:00</option>
+                                <option value="18:15">18:15</option>
+                                <option value="18:30">18:30</option>
+                                <option value="18:45">18:45</option>
+                                <option value="19:00">19:00</option>
+                                <option value="19:15">19:15</option>
+                                <option value="19:30">19:30</option>
+                                <option value="19:45">19:45</option>
+                                <option value="20:00">20:00</option>
+                                <option value="20:15">20:15</option>
+                                <option value="20:30">20:30</option>
+                                <option value="20:45">20:45</option>
+                                <option value="21:00">21:00</option>
+                                <option value="21:15">21:15</option>
+                                <option value="21:30">21:30</option>
+                                <option value="21:45">21:45</option>
+                                <option value="22:00">22:00</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>上課日期 *</label>
+                            <select id="classDayOfWeek" required>
+                                <option value="">請選擇</option>
+                                <option value="1">星期一</option>
+                                <option value="2">星期二</option>
+                                <option value="3">星期三</option>
+                                <option value="4">星期四</option>
+                                <option value="5">星期五</option>
+                                <option value="6">星期六</option>
+                                <option value="0">星期日</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>課堂描述</label>
+                            <textarea id="classDescription" rows="3"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeModal('addClassModal')">取消</button>
+                    <button class="btn btn-primary" onclick="saveClass()">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 載入指示器 -->
+        <div id="loadingIndicator" class="loading-indicator">
+            <div class="spinner"></div>
+            <p>載入中...</p>
+        </div>
+
+        <!-- Toast 通知 -->
+        <div id="toast" class="toast">
+            <div class="toast-content">
+                <span id="toastMessage"></span>
+                <button onclick="hideToast()">&times;</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Google Sheets API -->
+    <script src="https://apis.google.com/js/api.js"></script>
+    
+    <!-- 你的JS文件 -->
+    <script src="js/data.js"></script>
+    <script src="js/students.js"></script>
+    <script src="js/classes.js"></script>
+    <script src="js/attendance.js"></script>
+    <script src="js/statistics.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html> 

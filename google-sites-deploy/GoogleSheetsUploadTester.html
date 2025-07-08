@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Google Sheets Upload Tester</title>
+<style>
+    body { font-family: Arial, sans-serif; background: #f0f2f5; padding: 40px; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 30px; max-width: 500px; margin: auto; }
+    h2 { margin-top: 0; }
+    .form-group { margin-bottom: 20px; }
+    label { display: block; font-weight: bold; margin-bottom: 5px; }
+    input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 4px; }
+    button { padding: 12px 24px; background: #28a745; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; }
+    button:hover { background: #218838; }
+    #result { margin-top: 20px; white-space: pre-wrap; font-family: monospace; }
+</style>
+</head>
+<body>
+    <div class="card">
+        <h2>Google Sheets Upload Tester</h2>
+        <p>只需輸入 Apps Script URL 與工作表名稱，點擊「測試上傳」即可嘗試把一行測試資料寫入 Google Sheets。</p>
+        <div class="form-group">
+            <label>Apps Script URL (必填):</label>
+            <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+        </div>
+        <div class="form-group">
+            <label>Worksheet 名稱 (默認: 測試上傳):</label>
+            <input type="text" id="worksheet" placeholder="測試上傳">
+        </div>
+        <div class="form-group">
+            <label><input type="checkbox" id="nocors" checked> 使用 no-cors 方式 (繞過 CORS，無法讀回回應)</label>
+        </div>
+        <button onclick="uploadTest()">測試上傳</button>
+        <div id="result"></div>
+    </div>
+
+<script>
+async function uploadTest() {
+    const scriptUrl = document.getElementById('scriptUrl').value.trim();
+    const worksheet = document.getElementById('worksheet').value.trim() || '測試上傳';
+    const resultBox = document.getElementById('result');
+    const useNoCors = document.getElementById('nocors').checked;
+
+    if (!scriptUrl) {
+        alert('請輸入 Apps Script URL');
+        return;
+    }
+
+    // 建立測試資料
+    const testData = [
+        ['Tester', new Date().toLocaleString()]
+    ];
+
+    resultBox.textContent = '⏳ 正在上傳測試資料...';
+
+    try {
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: useNoCors ? { 'Content-Type': 'text/plain;charset=utf-8' } : { 'Content-Type': 'application/json' },
+            body: useNoCors ? JSON.stringify({ action: 'update', worksheet: worksheet, data: testData }) : JSON.stringify({ action: 'update', worksheet: worksheet, data: testData }),
+            mode: useNoCors ? 'no-cors' : 'cors'
+        });
+
+        if (useNoCors) {
+            resultBox.textContent = '已發送 no-cors 請求，瀏覽器無法讀回回應 (如無錯誤彈窗即視為已送達)。';
+            return;
+        }
+
+        const text = await response.text();
+        resultBox.textContent = `HTTP ${response.status} ${response.statusText}\n\n回應內容:\n${text}`;
+    } catch (error) {
+        resultBox.textContent = `❌ 發生錯誤:\n${error}`;
+    }
+}
+</script>
+</body>
+</html> 

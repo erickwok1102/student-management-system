@@ -1,464 +1,513 @@
 <!DOCTYPE html>
-<html lang="zh">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>興趣班學員管理系統</title>
-    <link rel="stylesheet" href="css/styles.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>學員管理系統 - Vercel版</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif; background: #f5f7fa; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; text-align: center; box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+        .card { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.18); }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; transition: all 0.3s ease; font-weight: 500; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-warning { background: #ffc107; color: #212529; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.15); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 8px; 
+            font-size: 16px; transition: border-color 0.3s ease; 
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: #007bff; box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+        .student-list { max-height: 500px; overflow-y: auto; }
+        .student-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 20px; border-bottom: 1px solid #eee; border-radius: 8px; 
+            margin-bottom: 10px; background: #f8f9fa; transition: all 0.3s ease;
+        }
+        .student-item:hover { background: #e9ecef; transform: translateX(5px); }
+        .notification { 
+            position: fixed; top: 20px; right: 20px; padding: 16px 24px; 
+            border-radius: 12px; color: white; font-weight: 600; z-index: 1000; 
+            opacity: 0; transition: all 0.3s ease; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .notification.success { background: linear-gradient(135deg, #28a745, #20c997); }
+        .notification.error { background: linear-gradient(135deg, #dc3545, #e74c3c); }
+        .notification.warning { background: linear-gradient(135deg, #ffc107, #f39c12); color: #333; }
+        .notification.show { opacity: 1; transform: translateY(0); }
+        .status-indicator { display: inline-block; width: 12px; height: 12px; border-radius: 50%; margin-left: 10px; }
+        .status-online { background: #28a745; box-shadow: 0 0 10px rgba(40,167,69,0.5); }
+        .status-offline { background: #dc3545; box-shadow: 0 0 10px rgba(220,53,69,0.5); }
+        .tabs { 
+            display: flex; border-bottom: 2px solid #e9ecef; margin-bottom: 30px; 
+            background: white; border-radius: 12px 12px 0 0; overflow: hidden;
+        }
+        .tab { 
+            padding: 18px 30px; cursor: pointer; border: none; background: none; 
+            font-size: 16px; font-weight: 500; transition: all 0.3s ease; 
+        }
+        .tab.active { background: #007bff; color: white; }
+        .tab:not(.active):hover { background: #f8f9fa; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .grid-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; }
+        .stat-card { 
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+            padding: 25px; border-radius: 12px; text-align: center; 
+            border-left: 4px solid #007bff; transition: transform 0.3s ease;
+        }
+        .stat-card:hover { transform: translateY(-5px); }
+        .sync-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 25px; }
+        .sync-card { text-align: center; padding: 30px; border-radius: 12px; background: linear-gradient(135deg, #f8f9fa, #e9ecef); }
+        .loading { text-align: center; padding: 40px; color: #666; }
+        .empty-state { text-align: center; padding: 60px 20px; color: #999; }
+        .empty-state h3 { margin-bottom: 10px; color: #666; }
+    </style>
 </head>
 <body>
-    <div id="app">
-        <!-- 頂部導航 -->
-        <header class="header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-graduation-cap"></i>
-                    <div class="logo-text">
-                        <h1>興趣班學員管理系統</h1>
-                        <p>Student Management System</p>
-                    </div>
-                </div>
-                <button class="menu-toggle" onclick="toggleMobileMenu()">
-                    <i class="fas fa-bars"></i>
-                </button>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 學員管理系統</h1>
+            <p>Vercel + Google Sheets 雲端同步版</p>
+            <div style="margin-top: 15px;">
+                <span>伺服器狀態:</span>
+                <span class="status-indicator status-offline" id="serverStatus"></span>
+                <span id="statusText">檢測中...</span>
             </div>
-        </header>
+        </div>
 
-        <!-- 側邊導航 -->
-        <nav class="sidebar" id="sidebar">
-            <div class="nav-item active" onclick="switchTab('students')">
-                <i class="fas fa-users"></i>
-                <span>學員管理</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('classes')">
-                <i class="fas fa-chalkboard-teacher"></i>
-                <span>課堂管理</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('attendance')">
-                <i class="fas fa-clipboard-check"></i>
-                <span>點名系統</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('statistics')">
-                <i class="fas fa-chart-bar"></i>
-                <span>統計報表</span>
-            </div>
-            <div class="nav-item" onclick="switchTab('settings')">
-                <i class="fas fa-cog"></i>
-                <span>系統設定</span>
-            </div>
-        </nav>
+        <!-- 標籤頁導航 -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('students')">👥 學員管理</button>
+            <button class="tab" onclick="showTab('sync')">☁️ 雲端同步</button>
+            <button class="tab" onclick="showTab('stats')">📊 統計報表</button>
+        </div>
 
-        <!-- 主內容區域 -->
-        <main class="main-content">
-            <!-- 學員管理 -->
-            <section id="students" class="tab-content active">
-                <div class="page-header">
-                    <h2><i class="fas fa-users"></i> 學員管理</h2>
-                    <button class="btn btn-primary" onclick="showAddStudentModal()">
-                        <i class="fas fa-plus"></i> 新增學員
-                    </button>
-                </div>
-
-                <div class="search-bar">
-                    <input type="text" id="studentSearch" placeholder="搜尋學員姓名或班別..." onkeyup="filterStudents()">
-                    <i class="fas fa-search"></i>
-                </div>
-
-                <div class="student-grid" id="studentGrid">
-                    <!-- 學員卡片將在這裡動態生成 -->
-                </div>
-            </section>
-
-            <!-- 課堂管理 -->
-            <section id="classes" class="tab-content">
-                <div class="page-header">
-                    <h2><i class="fas fa-chalkboard-teacher"></i> 課堂管理</h2>
-                    <button class="btn btn-primary" onclick="showAddClassModal()">
-                        <i class="fas fa-plus"></i> 新增班組
-                    </button>
-                </div>
-
-                <div class="class-actions">
-                    <button class="btn btn-secondary" onclick="showScheduleModal()">
-                        <i class="fas fa-calendar-alt"></i> 設定週期課堂
-                    </button>
-                    <button class="btn btn-info" onclick="showUpcomingClasses()">
-                        <i class="fas fa-clock"></i> 即將到來的課堂
-                    </button>
-                </div>
-
-                <div class="class-list" id="classList">
-                    <!-- 課堂列表將在這裡動態生成 -->
-                </div>
-            </section>
-
-            <!-- 點名系統 -->
-            <section id="attendance" class="tab-content">
-                <div class="page-header">
-                    <h2><i class="fas fa-clipboard-check"></i> 點名系統</h2>
-                </div>
-
-                <div class="attendance-controls">
+        <!-- 學員管理標籤 -->
+        <div id="studentsTab" class="tab-content active">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333;">➕ 新增學員</h3>
+                <div class="grid-form">
                     <div class="form-group">
-                        <label for="attendanceClass">選擇班別</label>
-                        <select id="attendanceClass" onchange="loadAttendanceList()">
-                            <option value="">請選擇班別</option>
-                        </select>
+                        <label>學員姓名 *</label>
+                        <input type="text" id="studentName" placeholder="請輸入學員姓名" required>
                     </div>
                     <div class="form-group">
-                        <label>選擇日期</label>
-                        <div class="date-quick-select">
-                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(-1)">上一堂</button>
-                            <button type="button" class="btn btn-primary" onclick="selectAttendanceDate(0)">今天</button>
-                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(1)">下一堂</button>
-                            <button type="button" class="btn btn-outline" onclick="selectAttendanceDate(2)">下下堂</button>
-                        </div>
-                        <div class="selected-date">
-                            <span id="selectedDateDisplay">請選擇日期</span>
-                            <input type="hidden" id="attendanceDate" onchange="loadAttendanceList()">
-                        </div>
+                        <label>別名/英文名</label>
+                        <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
                     </div>
-                </div>
-
-                <div class="attendance-summary" id="attendanceSummary" style="display: none;">
-                    <div class="summary-card">
-                        <div class="summary-item">
-                            <span class="label">總人數</span>
-                            <span class="value" id="totalStudents">0</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">出席</span>
-                            <span class="value present" id="presentCount">0</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">缺席</span>
-                            <span class="value absent" id="absentCount">0</span>
-                        </div>
-                        <div class="summary-item">
-                            <span class="label">出席率</span>
-                            <span class="value" id="attendanceRate">0%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="attendance-list" id="attendanceList">
-                    <!-- 點名列表將在這裡動態生成 -->
-                </div>
-
-                <div class="attendance-actions" id="attendanceActions" style="display: none;">
-                    <button class="btn btn-success" onclick="saveAttendance()">
-                        <i class="fas fa-save"></i> 保存點名記錄
-                    </button>
-                </div>
-            </section>
-
-            <!-- 統計報表 -->
-            <section id="statistics" class="tab-content">
-                <div class="page-header">
-                    <h2><i class="fas fa-chart-bar"></i> 統計報表</h2>
-                </div>
-
-                <div class="stats-filters">
                     <div class="form-group">
                         <label>班別</label>
-                        <select id="statsClass">
-                            <option value="">所有班別</option>
+                        <select id="studentClass">
+                            <option value="">請選擇班別</option>
+                            <option value="數學班">數學班</option>
+                            <option value="英文班">英文班</option>
+                            <option value="中文班">中文班</option>
+                            <option value="科學班">科學班</option>
+                            <option value="音樂班">音樂班</option>
+                            <option value="美術班">美術班</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>開始日期</label>
-                        <input type="date" id="statsStartDate">
+                        <label>聯絡電話</label>
+                        <input type="tel" id="studentPhone" placeholder="聯絡電話">
                     </div>
                     <div class="form-group">
-                        <label>結束日期</label>
-                        <input type="date" id="statsEndDate">
-                    </div>
-                    <button class="btn btn-primary" onclick="generateStats()">
-                        <i class="fas fa-chart-line"></i> 生成報表
-                    </button>
-                </div>
-
-                <div class="stats-overview" id="statsOverview">
-                    <!-- 統計概覽將在這裡顯示 -->
-                </div>
-
-                <div class="stats-charts" id="statsCharts">
-                    <!-- 圖表將在這裡顯示 -->
-                </div>
-            </section>
-
-            <!-- 系統設定 -->
-            <section id="settings" class="tab-content">
-                <div class="page-header">
-                    <h2><i class="fas fa-cog"></i> 系統設定</h2>
-                </div>
-
-                <div class="settings-section">
-                    <h3>數據管理</h3>
-                    <div class="settings-actions">
-                        <button class="btn btn-info" onclick="exportData()">
-                            <i class="fas fa-download"></i> 匯出數據
-                        </button>
-                        <button class="btn btn-warning" onclick="importData()">
-                            <i class="fas fa-upload"></i> 匯入數據
-                        </button>
-                        <button class="btn btn-danger" onclick="clearAllData()">
-                            <i class="fas fa-trash"></i> 清除所有數據
-                        </button>
-                    </div>
-                </div>
-
-                <div class="settings-section">
-                    <h3>Google Sheets 同步</h3>
-                    <div class="form-group">
-                        <label>Sheet ID</label>
-                        <input type="text" id="sheetId" placeholder="輸入 Google Sheet ID">
+                        <label>電子信箱</label>
+                        <input type="email" id="studentEmail" placeholder="電子信箱">
                     </div>
                     <div class="form-group">
-                        <label>API Key</label>
-                        <input type="password" id="apiKey" placeholder="輸入 API Key">
+                        <label>狀態</label>
+                        <select id="studentStatus">
+                            <option value="在讀">在讀</option>
+                            <option value="休學">休學</option>
+                            <option value="畢業">畢業</option>
+                            <option value="退學">退學</option>
+                        </select>
                     </div>
-                    <button class="btn btn-success" onclick="testConnection()">
-                        <i class="fas fa-link"></i> 測試連接
-                    </button>
                 </div>
-            </section>
-        </main>
+                <div class="form-group">
+                    <label>備註</label>
+                    <textarea id="studentRemarks" placeholder="其他備註資訊" rows="3"></textarea>
+                </div>
+                <div style="margin-top: 25px;">
+                    <button class="btn btn-success" onclick="addStudent()">➕ 新增學員</button>
+                    <button class="btn btn-primary" onclick="loadStudents()">🔄 重新載入</button>
+                    <button class="btn btn-warning" onclick="clearForm()">🧹 清空表單</button>
+                </div>
+            </div>
 
-        <!-- 模態框 -->
-        <!-- 新增學員模態框 -->
-        <div id="addStudentModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>新增學員</h3>
-                    <button class="close" onclick="closeModal('addStudentModal')">&times;</button>
-                </div>
-                <div class="modal-body">
-                    <form id="studentForm">
-                        <div class="form-group">
-                            <label>姓名 *</label>
-                            <input type="text" id="studentName" required>
-                        </div>
-                        <div class="form-group">
-                            <label>班別 *</label>
-                            <select id="studentClass" required>
-                                <option value="">請選擇班別</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>聯絡電話</label>
-                            <input type="tel" id="studentPhone">
-                        </div>
-                        <div class="form-group">
-                            <label>電子郵件</label>
-                            <input type="email" id="studentEmail">
-                        </div>
-                        <div class="form-group">
-                            <label>緊急聯絡人</label>
-                            <input type="text" id="emergencyContact">
-                        </div>
-                        <div class="form-group">
-                            <label>緊急聯絡電話</label>
-                            <input type="tel" id="emergencyPhone">
-                        </div>
-                        <div class="form-group">
-                            <label>備註</label>
-                            <textarea id="studentNotes" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeModal('addStudentModal')">取消</button>
-                    <button class="btn btn-primary" onclick="saveStudent()">保存</button>
+            <div class="card">
+                <h3 style="margin-bottom: 20px; color: #333;">📋 學員列表</h3>
+                <div class="student-list" id="studentList">
+                    <div class="loading">載入中...</div>
                 </div>
             </div>
         </div>
 
-        <!-- 新增班組模態框 -->
-        <div id="addClassModal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>新增班組</h3>
-                    <button class="close" onclick="closeModal('addClassModal')">&times;</button>
+        <!-- 雲端同步標籤 -->
+        <div id="syncTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333;">☁️ Google Sheets 同步</h3>
+                <div class="sync-grid">
+                    <div class="sync-card">
+                        <h4 style="color: #28a745; margin-bottom: 15px;">📤 上傳到雲端</h4>
+                        <button class="btn btn-success" onclick="syncToCloud()" style="width: 100%; margin-bottom: 15px;">
+                            ☁️ 同步學員到雲端
+                        </button>
+                        <p style="font-size: 14px; color: #666; line-height: 1.5;">
+                            將本地學員資料上傳到 Google Sheets，覆蓋雲端現有資料
+                        </p>
+                    </div>
+                    <div class="sync-card">
+                        <h4 style="color: #007bff; margin-bottom: 15px;">📥 從雲端載入</h4>
+                        <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 15px;">
+                            📥 從雲端載入
+                        </button>
+                        <p style="font-size: 14px; color: #666; line-height: 1.5;">
+                            從 Google Sheets 載入學員資料，覆蓋本地現有資料
+                        </p>
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <form id="classForm">
-                        <div class="form-group">
-                            <label>班組名稱 *</label>
-                            <input type="text" id="className" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="classStartTime">開始時間 *</label>
-                            <select id="classStartTime" required>
-                                <option value="">請選擇開始時間</option>
-                                <option value="08:00">08:00</option>
-                                <option value="08:15">08:15</option>
-                                <option value="08:30">08:30</option>
-                                <option value="08:45">08:45</option>
-                                <option value="09:00">09:00</option>
-                                <option value="09:15">09:15</option>
-                                <option value="09:30">09:30</option>
-                                <option value="09:45">09:45</option>
-                                <option value="10:00">10:00</option>
-                                <option value="10:15">10:15</option>
-                                <option value="10:30">10:30</option>
-                                <option value="10:45">10:45</option>
-                                <option value="11:00">11:00</option>
-                                <option value="11:15">11:15</option>
-                                <option value="11:30">11:30</option>
-                                <option value="11:45">11:45</option>
-                                <option value="12:00">12:00</option>
-                                <option value="12:15">12:15</option>
-                                <option value="12:30">12:30</option>
-                                <option value="12:45">12:45</option>
-                                <option value="13:00">13:00</option>
-                                <option value="13:15">13:15</option>
-                                <option value="13:30">13:30</option>
-                                <option value="13:45">13:45</option>
-                                <option value="14:00">14:00</option>
-                                <option value="14:15">14:15</option>
-                                <option value="14:30">14:30</option>
-                                <option value="14:45">14:45</option>
-                                <option value="15:00">15:00</option>
-                                <option value="15:15">15:15</option>
-                                <option value="15:30">15:30</option>
-                                <option value="15:45">15:45</option>
-                                <option value="16:00">16:00</option>
-                                <option value="16:15">16:15</option>
-                                <option value="16:30">16:30</option>
-                                <option value="16:45">16:45</option>
-                                <option value="17:00">17:00</option>
-                                <option value="17:15">17:15</option>
-                                <option value="17:30">17:30</option>
-                                <option value="17:45">17:45</option>
-                                <option value="18:00">18:00</option>
-                                <option value="18:15">18:15</option>
-                                <option value="18:30">18:30</option>
-                                <option value="18:45">18:45</option>
-                                <option value="19:00">19:00</option>
-                                <option value="19:15">19:15</option>
-                                <option value="19:30">19:30</option>
-                                <option value="19:45">19:45</option>
-                                <option value="20:00">20:00</option>
-                                <option value="20:15">20:15</option>
-                                <option value="20:30">20:30</option>
-                                <option value="20:45">20:45</option>
-                                <option value="21:00">21:00</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="classEndTime">結束時間 *</label>
-                            <select id="classEndTime" required>
-                                <option value="">請選擇結束時間</option>
-                                <option value="08:15">08:15</option>
-                                <option value="08:30">08:30</option>
-                                <option value="08:45">08:45</option>
-                                <option value="09:00">09:00</option>
-                                <option value="09:15">09:15</option>
-                                <option value="09:30">09:30</option>
-                                <option value="09:45">09:45</option>
-                                <option value="10:00">10:00</option>
-                                <option value="10:15">10:15</option>
-                                <option value="10:30">10:30</option>
-                                <option value="10:45">10:45</option>
-                                <option value="11:00">11:00</option>
-                                <option value="11:15">11:15</option>
-                                <option value="11:30">11:30</option>
-                                <option value="11:45">11:45</option>
-                                <option value="12:00">12:00</option>
-                                <option value="12:15">12:15</option>
-                                <option value="12:30">12:30</option>
-                                <option value="12:45">12:45</option>
-                                <option value="13:00">13:00</option>
-                                <option value="13:15">13:15</option>
-                                <option value="13:30">13:30</option>
-                                <option value="13:45">13:45</option>
-                                <option value="14:00">14:00</option>
-                                <option value="14:15">14:15</option>
-                                <option value="14:30">14:30</option>
-                                <option value="14:45">14:45</option>
-                                <option value="15:00">15:00</option>
-                                <option value="15:15">15:15</option>
-                                <option value="15:30">15:30</option>
-                                <option value="15:45">15:45</option>
-                                <option value="16:00">16:00</option>
-                                <option value="16:15">16:15</option>
-                                <option value="16:30">16:30</option>
-                                <option value="16:45">16:45</option>
-                                <option value="17:00">17:00</option>
-                                <option value="17:15">17:15</option>
-                                <option value="17:30">17:30</option>
-                                <option value="17:45">17:45</option>
-                                <option value="18:00">18:00</option>
-                                <option value="18:15">18:15</option>
-                                <option value="18:30">18:30</option>
-                                <option value="18:45">18:45</option>
-                                <option value="19:00">19:00</option>
-                                <option value="19:15">19:15</option>
-                                <option value="19:30">19:30</option>
-                                <option value="19:45">19:45</option>
-                                <option value="20:00">20:00</option>
-                                <option value="20:15">20:15</option>
-                                <option value="20:30">20:30</option>
-                                <option value="20:45">20:45</option>
-                                <option value="21:00">21:00</option>
-                                <option value="21:15">21:15</option>
-                                <option value="21:30">21:30</option>
-                                <option value="21:45">21:45</option>
-                                <option value="22:00">22:00</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>上課日期 *</label>
-                            <select id="classDayOfWeek" required>
-                                <option value="">請選擇</option>
-                                <option value="1">星期一</option>
-                                <option value="2">星期二</option>
-                                <option value="3">星期三</option>
-                                <option value="4">星期四</option>
-                                <option value="5">星期五</option>
-                                <option value="6">星期六</option>
-                                <option value="0">星期日</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label>課堂描述</label>
-                            <textarea id="classDescription" rows="3"></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button class="btn btn-secondary" onclick="closeModal('addClassModal')">取消</button>
-                    <button class="btn btn-primary" onclick="saveClass()">保存</button>
+                
+                <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                    <h4 style="color: #333; margin-bottom: 10px;">📋 同步狀態</h4>
+                    <p id="syncStatus" style="color: #666;">尚未進行同步</p>
                 </div>
             </div>
         </div>
 
-        <!-- 載入指示器 -->
-        <div id="loadingIndicator" class="loading-indicator">
-            <div class="spinner"></div>
-            <p>載入中...</p>
-        </div>
-
-        <!-- Toast 通知 -->
-        <div id="toast" class="toast">
-            <div class="toast-content">
-                <span id="toastMessage"></span>
-                <button onclick="hideToast()">&times;</button>
+        <!-- 統計報表標籤 -->
+        <div id="statsTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333;">📊 統計報表</h3>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-left-color: #007bff;">
+                        <h4 style="color: #007bff; margin-bottom: 10px;">總學員數</h4>
+                        <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #333;" id="totalStudents">0</p>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #28a745;">
+                        <h4 style="color: #28a745; margin-bottom: 10px;">在讀學員</h4>
+                        <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #333;" id="activeStudents">0</p>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ffc107;">
+                        <h4 style="color: #f39c12; margin-bottom: 10px;">休學學員</h4>
+                        <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #333;" id="suspendedStudents">0</p>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #6c757d;">
+                        <h4 style="color: #6c757d; margin-bottom: 10px;">畢業學員</h4>
+                        <p style="font-size: 32px; font-weight: bold; margin: 10px 0; color: #333;" id="graduatedStudents">0</p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <button class="btn btn-primary" onclick="updateStatistics()">🔄 更新統計</button>
+                    <button class="btn btn-success" onclick="exportStudentList()">📄 匯出學員清單</button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Google Sheets API -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    
-    <!-- 你的JS文件 -->
-    <script src="js/data.js"></script>
-    <script src="js/students.js"></script>
-    <script src="js/classes.js"></script>
-    <script src="js/attendance.js"></script>
-    <script src="js/statistics.js"></script>
-    <script src="js/app.js"></script>
+    <!-- 通知元素 -->
+    <div id="notification" class="notification"></div>
+
+    <script>
+        // 全域變數
+        let students = [];
+        const API_BASE = ''; // Vercel 會自動處理相對路徑
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 學員管理系統啟動中...');
+            await checkServerStatus();
+            await loadStudents();
+            updateStatistics();
+            showNotification('系統啟動完成！', 'success');
+        });
+
+        // 檢查伺服器狀態
+        async function checkServerStatus() {
+            try {
+                document.getElementById('statusText').textContent = '檢測中...';
+                const response = await fetch('/api/get-students');
+                
+                if (response.ok) {
+                    document.getElementById('serverStatus').className = 'status-indicator status-online';
+                    document.getElementById('statusText').textContent = '線上';
+                    console.log('✅ API 伺服器連線正常');
+                } else {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+            } catch (error) {
+                document.getElementById('serverStatus').className = 'status-indicator status-offline';
+                document.getElementById('statusText').textContent = '離線';
+                console.log('⚠️ API 伺服器離線，使用本地模式');
+            }
+        }
+
+        // 標籤頁切換
+        function showTab(tabName) {
+            // 移除所有 active 類別
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            // 啟用選中的標籤
+            event.target.classList.add('active');
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            // 如果切換到統計頁面，更新統計
+            if (tabName === 'stats') {
+                updateStatistics();
+            }
+        }
+
+        // 顯示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+
+        // 新增學員
+        async function addStudent() {
+            const name = document.getElementById('studentName').value.trim();
+            if (!name) {
+                showNotification('請輸入學員姓名', 'error');
+                return;
+            }
+
+            const student = {
+                id: Date.now().toString(),
+                name: name,
+                nickname: document.getElementById('studentNickname').value.trim(),
+                class: document.getElementById('studentClass').value,
+                phone: document.getElementById('studentPhone').value.trim(),
+                email: document.getElementById('studentEmail').value.trim(),
+                status: document.getElementById('studentStatus').value,
+                remarks: document.getElementById('studentRemarks').value.trim(),
+                createdAt: new Date().toLocaleDateString('zh-TW')
+            };
+
+            students.push(student);
+            localStorage.setItem('studentData', JSON.stringify(students));
+            
+            clearForm();
+            displayStudents();
+            updateStatistics();
+            showNotification(`學員 ${name} 已新增`, 'success');
+        }
+
+        // 清空表單
+        function clearForm() {
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentNickname').value = '';
+            document.getElementById('studentClass').value = '';
+            document.getElementById('studentPhone').value = '';
+            document.getElementById('studentEmail').value = '';
+            document.getElementById('studentStatus').value = '在讀';
+            document.getElementById('studentRemarks').value = '';
+        }
+
+        // 載入學員資料
+        async function loadStudents() {
+            // 先從本地載入
+            const localData = localStorage.getItem('studentData');
+            if (localData) {
+                try {
+                    students = JSON.parse(localData);
+                    console.log(`📚 載入 ${students.length} 筆本地學員資料`);
+                } catch (error) {
+                    console.error('本地資料解析失敗:', error);
+                    students = [];
+                }
+            } else {
+                students = [];
+            }
+            
+            displayStudents();
+            updateStatistics();
+        }
+
+        // 顯示學員列表
+        function displayStudents() {
+            const list = document.getElementById('studentList');
+            
+            if (students.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>📚 還沒有學員資料</h3>
+                        <p>點擊上方的「新增學員」開始建立你的學員名冊</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = students.map(student => `
+                <div class="student-item">
+                    <div>
+                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 5px;">
+                            ${student.name}
+                            ${student.nickname ? `<span style="color: #666; font-weight: 400;">(${student.nickname})</span>` : ''}
+                        </div>
+                        <div style="color: #666; font-size: 14px;">
+                            <span style="margin-right: 15px;">📚 ${student.class || '未分配班別'}</span>
+                            <span style="color: ${getStatusColor(student.status)}; font-weight: 500;">● ${student.status}</span>
+                        </div>
+                        <div style="color: #999; font-size: 12px; margin-top: 3px;">
+                            ${student.createdAt} 建立
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteStudent('${student.id}')" 
+                                title="刪除學員">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 取得狀態顏色
+        function getStatusColor(status) {
+            switch (status) {
+                case '在讀': return '#28a745';
+                case '休學': return '#ffc107';
+                case '畢業': return '#6c757d';
+                case '退學': return '#dc3545';
+                default: return '#007bff';
+            }
+        }
+
+        // 刪除學員
+        function deleteStudent(id) {
+            const student = students.find(s => s.id === id);
+            if (!student) return;
+            
+            if (confirm(`確定要刪除學員「${student.name}」嗎？此操作無法復原。`)) {
+                students = students.filter(s => s.id !== id);
+                localStorage.setItem('studentData', JSON.stringify(students));
+                displayStudents();
+                updateStatistics();
+                showNotification(`學員 ${student.name} 已刪除`, 'warning');
+            }
+        }
+
+        // 同步到雲端
+        async function syncToCloud() {
+            if (students.length === 0) {
+                showNotification('沒有學員資料可同步', 'warning');
+                return;
+            }
+
+            try {
+                showNotification('正在同步到雲端...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
+                
+                const response = await fetch('/api/sync-students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ students })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ ${result.message} (${new Date().toLocaleString('zh-TW')})`;
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('同步失敗:', error);
+                showNotification('同步失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = `❌ 同步失敗: ${error.message}`;
+            }
+        }
+
+        // 從雲端載入
+        async function loadFromCloud() {
+            try {
+                showNotification('正在從雲端載入...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入資料...';
+                
+                const response = await fetch('/api/get-students');
+                const result = await response.json();
+                
+                if (result.success && result.students) {
+                    students = result.students;
+                    localStorage.setItem('studentData', JSON.stringify(students));
+                    displayStudents();
+                    updateStatistics();
+                    showNotification(`成功載入 ${result.count} 筆學員資料`, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 筆資料 (${new Date().toLocaleString('zh-TW')})`;
+                } else {
+                    throw new Error(result.error || '載入失敗');
+                }
+            } catch (error) {
+                console.error('載入失敗:', error);
+                showNotification('載入失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = `❌ 載入失敗: ${error.message}`;
+            }
+        }
+
+        // 更新統計
+        function updateStatistics() {
+            const total = students.length;
+            const active = students.filter(s => s.status === '在讀').length;
+            const suspended = students.filter(s => s.status === '休學').length;
+            const graduated = students.filter(s => s.status === '畢業').length;
+
+            document.getElementById('totalStudents').textContent = total;
+            document.getElementById('activeStudents').textContent = active;
+            document.getElementById('suspendedStudents').textContent = suspended;
+            document.getElementById('graduatedStudents').textContent = graduated;
+        }
+
+        // 匯出學員清單
+        function exportStudentList() {
+            if (students.length === 0) {
+                showNotification('沒有學員資料可匯出', 'warning');
+                return;
+            }
+
+            const data = {
+                exportDate: new Date().toISOString(),
+                totalStudents: students.length,
+                students: students
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `學員清單_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showNotification('學員清單已匯出', 'success');
+        }
+
+        // 錯誤處理
+        window.addEventListener('error', function(event) {
+            console.error('Global error:', event.error);
+        });
+
+        // 服務 Worker 註冊 (PWA 支援)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                // 這裡可以註冊 service worker
+            });
+        }
+    </script>
 </body>
 </html> 
