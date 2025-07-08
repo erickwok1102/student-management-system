@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>學員管理系統</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; text-align: center; }
+        .card { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 25px; }
+        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; transition: all 0.3s ease; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn:hover { transform: translateY(-2px); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
+        .student-list { max-height: 400px; overflow-y: auto; }
+        .student-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
+        .notification { position: fixed; top: 20px; right: 20px; padding: 15px; border-radius: 8px; color: white; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
+        .notification.success { background: #28a745; }
+        .notification.error { background: #dc3545; }
+        .notification.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎓 學員管理系統</h1>
+            <p>Vercel + Google Sheets 版本</p>
+        </div>
+
+        <div class="card">
+            <h3>新增學員</h3>
+            <div class="form-group">
+                <label>學員姓名</label>
+                <input type="text" id="studentName" placeholder="請輸入學員姓名">
+            </div>
+            <div class="form-group">
+                <label>班別</label>
+                <select id="studentClass">
+                    <option value="">請選擇班別</option>
+                    <option value="數學班">數學班</option>
+                    <option value="英文班">英文班</option>
+                    <option value="中文班">中文班</option>
+                </select>
+            </div>
+            <button class="btn btn-success" onclick="addStudent()">新增學員</button>
+        </div>
+
+        <div class="card">
+            <h3>學員列表</h3>
+            <div class="student-list" id="studentList">
+                <div style="text-align: center; padding: 20px; color: #666;">載入中...</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification"></div>
+
+    <script>
+        let students = [];
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStudents();
+        });
+
+        // 載入學員
+        function loadStudents() {
+            const localData = localStorage.getItem('studentData');
+            if (localData) {
+                students = JSON.parse(localData);
+            }
+            displayStudents();
+        }
+
+        // 顯示學員列表
+        function displayStudents() {
+            const list = document.getElementById('studentList');
+            if (students.length === 0) {
+                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">還沒有學員資料</div>';
+                return;
+            }
+
+            list.innerHTML = students.map(student => `
+                <div class="student-item">
+                    <div>
+                        <strong>${student.name}</strong> - ${student.class || '未分配班別'}
+                    </div>
+                    <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">刪除</button>
+                </div>
+            `).join('');
+        }
+
+        // 新增學員
+        function addStudent() {
+            const name = document.getElementById('studentName').value.trim();
+            const className = document.getElementById('studentClass').value;
+            
+            if (!name) {
+                showNotification('請輸入學員姓名', 'error');
+                return;
+            }
+
+            const student = {
+                id: Date.now().toString(),
+                name: name,
+                class: className,
+                createdAt: new Date().toLocaleDateString()
+            };
+
+            students.push(student);
+            localStorage.setItem('studentData', JSON.stringify(students));
+            
+            // 清空表單
+            document.getElementById('studentName').value = '';
+            document.getElementById('studentClass').value = '';
+            
+            displayStudents();
+            showNotification('學員新增成功', 'success');
+        }
+
+        // 刪除學員
+        function deleteStudent(id) {
+            if (confirm('確定要刪除此學員嗎？')) {
+                students = students.filter(s => s.id !== id);
+                localStorage.setItem('studentData', JSON.stringify(students));
+                displayStudents();
+                showNotification('學員已刪除', 'success');
+            }
+        }
+
+        // 顯示通知
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
