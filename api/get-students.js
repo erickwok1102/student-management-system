@@ -1,5 +1,3 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -7,57 +5,40 @@ export default async function handler(req, res) {
 
     try {
         // 檢查環境變數
-        const { GOOGLE_SHEET_ID, GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } = process.env;
+        const { GOOGLE_APPS_SCRIPT_URL } = process.env;
         
-        if (!GOOGLE_SHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+        if (!GOOGLE_APPS_SCRIPT_URL) {
             return res.status(500).json({ 
                 success: false, 
-                error: 'Missing Google Sheets configuration',
-                debug: {
-                    hasSheetId: !!GOOGLE_SHEET_ID,
-                    hasClientEmail: !!GOOGLE_CLIENT_EMAIL,
-                    hasPrivateKey: !!GOOGLE_PRIVATE_KEY
-                }
+                error: 'Missing Google Apps Script URL configuration',
+                message: '請先設定 Google Apps Script Web App URL'
             });
         }
 
-        // 初始化 Google Sheets
-        const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID);
-        
-        // 使用 Service Account 認證
-        await doc.useServiceAccountAuth({
-            client_email: GOOGLE_CLIENT_EMAIL,
-            private_key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        // 呼叫 Google Apps Script
+        const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getStudents`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
         });
 
-        // 載入文件資訊
-        await doc.loadInfo();
-        
-        // 取得第一個工作表
-        const sheet = doc.sheetsByIndex[0];
-        
-        // 讀取所有行
-        const rows = await sheet.getRows();
-        
-        // 轉換為學員資料格式
-        const students = rows.map(row => ({
-            id: row.id || Date.now().toString(),
-            name: row.name || row['姓名'] || '',
-            nickname: row.nickname || row['別名'] || '',
-            class: row.class || row['班別'] || '',
-            phone: row.phone || row['電話'] || '',
-            email: row.email || row['信箱'] || '',
-            status: row.status || row['狀態'] || '在讀',
-            remarks: row.remarks || row['備註'] || '',
-            createdAt: row.createdAt || row['建立日期'] || ''
-        }));
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-        res.status(200).json({
-            success: true,
-            count: students.length,
-            students: students,
-            message: `成功載入 ${students.length} 筆學員資料`
-        });
+        const data = await response.json();
+        
+        if (data.success) {
+            res.status(200).json({
+                success: true,
+                count: data.students ? data.students.length : 0,
+                students: data.students || [],
+                message: `成功載入 ${data.students ? data.students.length : 0} 筆學員資料`
+            });
+        } else {
+            throw new Error(data.error || '載入失敗');
+        }
 
     } catch (error) {
         console.error('Get students error:', error);

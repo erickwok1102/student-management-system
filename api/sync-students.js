@@ -1,5 +1,3 @@
-const { GoogleSpreadsheet } = require('google-spreadsheet');
-
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
@@ -7,17 +5,13 @@ export default async function handler(req, res) {
 
     try {
         // 檢查環境變數
-        const { GOOGLE_SHEET_ID, GOOGLE_CLIENT_EMAIL, GOOGLE_PRIVATE_KEY } = process.env;
+        const { GOOGLE_APPS_SCRIPT_URL } = process.env;
         
-        if (!GOOGLE_SHEET_ID || !GOOGLE_CLIENT_EMAIL || !GOOGLE_PRIVATE_KEY) {
+        if (!GOOGLE_APPS_SCRIPT_URL) {
             return res.status(500).json({ 
                 success: false, 
-                error: 'Missing Google Sheets configuration',
-                debug: {
-                    hasSheetId: !!GOOGLE_SHEET_ID,
-                    hasClientEmail: !!GOOGLE_CLIENT_EMAIL,
-                    hasPrivateKey: !!GOOGLE_PRIVATE_KEY
-                }
+                error: 'Missing Google Apps Script URL configuration',
+                message: '請先設定 Google Apps Script Web App URL'
             });
         }
 
@@ -31,58 +25,34 @@ export default async function handler(req, res) {
             });
         }
 
-        // 初始化 Google Sheets
-        const doc = new GoogleSpreadsheet(GOOGLE_SHEET_ID);
-        
-        // 使用 Service Account 認證
-        await doc.useServiceAccountAuth({
-            client_email: GOOGLE_CLIENT_EMAIL,
-            private_key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
+        // 呼叫 Google Apps Script
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                action: 'syncStudents',
+                students: students
+            })
         });
 
-        // 載入文件資訊
-        await doc.loadInfo();
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
         
-        // 取得第一個工作表
-        let sheet = doc.sheetsByIndex[0];
-        
-        // 如果沒有工作表，創建一個
-        if (!sheet) {
-            sheet = await doc.addSheet({
-                title: '學員資料',
-                headerValues: ['id', 'name', 'nickname', 'class', 'phone', 'email', 'status', 'remarks', 'createdAt']
+        if (data.success) {
+            res.status(200).json({
+                success: true,
+                message: `成功同步 ${students.length} 筆學員資料到 Google Sheets`,
+                count: students.length,
+                timestamp: new Date().toISOString()
             });
+        } else {
+            throw new Error(data.error || '同步失敗');
         }
-
-        // 清空現有資料
-        await sheet.clear();
-        
-        // 設定標題行
-        await sheet.setHeaderRow(['id', 'name', 'nickname', 'class', 'phone', 'email', 'status', 'remarks', 'createdAt']);
-        
-        // 新增學員資料
-        if (students.length > 0) {
-            const rows = students.map(student => ({
-                id: student.id || '',
-                name: student.name || '',
-                nickname: student.nickname || '',
-                class: student.class || '',
-                phone: student.phone || '',
-                email: student.email || '',
-                status: student.status || '在讀',
-                remarks: student.remarks || '',
-                createdAt: student.createdAt || ''
-            }));
-
-            await sheet.addRows(rows);
-        }
-
-        res.status(200).json({
-            success: true,
-            message: `成功同步 ${students.length} 筆學員資料到 Google Sheets`,
-            count: students.length,
-            timestamp: new Date().toISOString()
-        });
 
     } catch (error) {
         console.error('Sync students error:', error);
