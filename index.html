@@ -3,26 +3,168 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>學員管理系統</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>學員管理系統 - 完整版本 v2.1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f7fa; color: #333; }
+        body { 
+            font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); 
+            color: #333; 
+            min-height: 100vh;
+        }
         .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
-        .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; text-align: center; }
-        .card { background: white; border-radius: 15px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 30px; margin-bottom: 25px; }
-        .btn { padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; margin: 5px; transition: all 0.3s ease; }
-        .btn-primary { background: #007bff; color: white; }
-        .btn-success { background: #28a745; color: white; }
-        .btn:hover { transform: translateY(-2px); }
-        .form-group { margin-bottom: 20px; }
-        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
-        .form-group input, .form-group select { width: 100%; padding: 12px; border: 2px solid #e1e5e9; border-radius: 8px; font-size: 16px; }
-        .student-list { max-height: 400px; overflow-y: auto; }
-        .student-item { display: flex; justify-content: space-between; align-items: center; padding: 15px; border-bottom: 1px solid #eee; }
-        .notification { position: fixed; top: 20px; right: 20px; padding: 15px; border-radius: 8px; color: white; z-index: 1000; opacity: 0; transition: opacity 0.3s; }
-        .notification.success { background: #28a745; }
-        .notification.error { background: #dc3545; }
-        .notification.show { opacity: 1; }
+        .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; padding: 40px; border-radius: 20px; margin-bottom: 30px; 
+            text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+        }
+        .header h1 { font-size: 2.5rem; margin-bottom: 10px; }
+        .header p { font-size: 1.2rem; opacity: 0.9; }
+        .card { 
+            background: rgba(255,255,255,0.95); backdrop-filter: blur(10px);
+            border-radius: 20px; box-shadow: 0 8px 32px rgba(0,0,0,0.1); 
+            padding: 30px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.2);
+        }
+        .btn { 
+            padding: 14px 28px; border: none; border-radius: 12px; cursor: pointer; 
+            font-size: 16px; margin: 8px; transition: all 0.3s ease; font-weight: 600;
+        }
+        .btn-primary { background: linear-gradient(135deg, #007bff, #0056b3); color: white; }
+        .btn-success { background: linear-gradient(135deg, #28a745, #1e7e34); color: white; }
+        .btn-warning { background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; }
+        .btn-danger { background: linear-gradient(135deg, #dc3545, #c82333); color: white; }
+        .btn:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+        
+        .form-group { margin-bottom: 25px; }
+        .form-group label { 
+            display: block; margin-bottom: 8px; font-weight: 600; 
+            color: #555; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .form-group input, .form-group select, .form-group textarea { 
+            width: 100%; padding: 15px 20px; border: 2px solid #e1e5e9; 
+            border-radius: 12px; font-size: 16px; transition: all 0.3s ease;
+            background: rgba(255,255,255,0.8);
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: #007bff; 
+            box-shadow: 0 0 0 4px rgba(0,123,255,0.1);
+            background: white;
+        }
+        
+        .student-item { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 25px; border-radius: 15px; margin-bottom: 15px; 
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+            transition: all 0.3s ease; border-left: 5px solid #007bff;
+        }
+        .student-item:hover { 
+            background: linear-gradient(135deg, #e9ecef, #dee2e6); 
+            transform: translateX(10px); box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .notification { 
+            position: fixed; top: 30px; right: 30px; padding: 20px 30px; 
+            border-radius: 15px; color: white; font-weight: 600; z-index: 1000; 
+            opacity: 0; transition: all 0.4s ease; box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .notification.success { background: linear-gradient(135deg, #28a745, #20c997); }
+        .notification.error { background: linear-gradient(135deg, #dc3545, #e74c3c); }
+        .notification.warning { background: linear-gradient(135deg, #ffc107, #f39c12); color: #333; }
+        .notification.show { opacity: 1; transform: translateY(0); }
+        
+        .status-indicator { 
+            display: inline-block; width: 14px; height: 14px; border-radius: 50%; 
+            margin-left: 10px; animation: pulse 2s infinite;
+        }
+        .status-online { background: #28a745; box-shadow: 0 0 15px rgba(40,167,69,0.6); }
+        .status-offline { background: #dc3545; box-shadow: 0 0 15px rgba(220,53,69,0.6); }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .tabs { 
+            display: flex; border-bottom: 3px solid #e9ecef; margin-bottom: 30px; 
+            background: rgba(255,255,255,0.9); border-radius: 15px 15px 0 0; 
+            overflow: hidden; backdrop-filter: blur(10px);
+        }
+        .tab { 
+            padding: 20px 35px; cursor: pointer; border: none; background: none; 
+            font-size: 16px; font-weight: 600; transition: all 0.3s ease; 
+            position: relative; text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .tab.active { 
+            background: linear-gradient(135deg, #007bff, #0056b3); 
+            color: white; 
+        }
+        .tab:not(.active):hover { background: rgba(0,123,255,0.1); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s ease; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .grid-form { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 25px; 
+        }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+            gap: 25px; 
+        }
+        .stat-card { 
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+            padding: 30px; border-radius: 20px; text-align: center; 
+            border-left: 6px solid #007bff; transition: all 0.3s ease;
+        }
+        .stat-card:hover { 
+            transform: translateY(-8px); 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .sync-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); 
+            gap: 30px; 
+        }
+        .sync-card { 
+            text-align: center; padding: 40px; border-radius: 20px; 
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef); 
+            transition: all 0.3s ease;
+        }
+        .sync-card:hover { 
+            transform: translateY(-5px); 
+            box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+        }
+        
+        .empty-state { 
+            text-align: center; padding: 80px 20px; color: #999; 
+        }
+        .empty-state h3 { 
+            margin-bottom: 15px; color: #666; font-size: 24px; 
+        }
+        .empty-state p { font-size: 16px; line-height: 1.6; }
+        
+        /* 響應式設計 */
+        @media (max-width: 768px) {
+            .container { padding: 15px; }
+            .header { padding: 30px 20px; }
+            .header h1 { font-size: 2rem; }
+            .grid-form { grid-template-columns: 1fr; }
+            .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
+            .sync-grid { grid-template-columns: 1fr; }
+            .tabs { flex-wrap: wrap; }
+            .tab { padding: 15px 20px; }
+        }
     </style>
 </head>
 <body>
@@ -30,76 +172,221 @@
         <div class="header">
             <h1>🎓 學員管理系統</h1>
             <p>Vercel + Google Sheets 版本</p>
+            <div style="margin-top: 20px;">
+                <span style="font-size: 16px;">伺服器狀態:</span>
+                <span class="status-indicator status-offline" id="serverStatus"></span>
+                <span id="statusText" style="font-weight: 600;">檢測中...</span>
+            </div>
         </div>
 
-        <div class="card">
-            <h3>新增學員</h3>
-            <div class="form-group">
-                <label>學員姓名</label>
-                <input type="text" id="studentName" placeholder="請輸入學員姓名">
-            </div>
-            <div class="form-group">
-                <label>班別</label>
-                <select id="studentClass">
-                    <option value="">請選擇班別</option>
-                    <option value="數學班">數學班</option>
-                    <option value="英文班">英文班</option>
-                    <option value="中文班">中文班</option>
-                </select>
-            </div>
-            <button class="btn btn-success" onclick="addStudent()">新增學員</button>
+        <!-- 標籤頁導航 -->
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('students', this)">👥 學員管理</button>
+            <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
+            <button class="tab" onclick="showTab('stats', this)">📊 統計報表</button>
         </div>
 
-        <div class="card">
-            <h3>學員列表</h3>
-            <div class="student-list" id="studentList">
-                <div style="text-align: center; padding: 20px; color: #666;">載入中...</div>
+        <!-- 學員管理標籤 -->
+        <div id="studentsTab" class="tab-content active">
+            <div class="card">
+                <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">➕ 新增學員</h3>
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>學員姓名 *</label>
+                        <input type="text" id="studentName" placeholder="請輸入學員姓名" required>
+                    </div>
+                    <div class="form-group">
+                        <label>別名/英文名</label>
+                        <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
+                    </div>
+                    <div class="form-group">
+                        <label>班別</label>
+                        <select id="studentClass">
+                            <option value="">請選擇班別</option>
+                            <option value="數學班">數學班</option>
+                            <option value="英文班">英文班</option>
+                            <option value="中文班">中文班</option>
+                            <option value="科學班">科學班</option>
+                            <option value="音樂班">音樂班</option>
+                            <option value="美術班">美術班</option>
+                            <option value="體育班">體育班</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>聯絡電話</label>
+                        <input type="tel" id="studentPhone" placeholder="聯絡電話">
+                    </div>
+                    <div class="form-group">
+                        <label>電子信箱</label>
+                        <input type="email" id="studentEmail" placeholder="電子信箱">
+                    </div>
+                    <div class="form-group">
+                        <label>狀態</label>
+                        <select id="studentStatus">
+                            <option value="在讀">在讀</option>
+                            <option value="休學">休學</option>
+                            <option value="畢業">畢業</option>
+                            <option value="退學">退學</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>備註</label>
+                    <textarea id="studentRemarks" placeholder="其他備註資訊" rows="4"></textarea>
+                </div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-success" onclick="addStudent()">➕ 新增學員</button>
+                    <button class="btn btn-primary" onclick="loadStudents()">🔄 重新載入</button>
+                    <button class="btn btn-warning" onclick="clearForm()">🧹 清空表單</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
+                <div class="student-list" id="studentList">
+                    <div class="empty-state">
+                        <h3>🔄 載入中...</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 雲端同步標籤 -->
+        <div id="syncTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">☁️ Google Sheets 同步</h3>
+                <div class="sync-grid">
+                    <div class="sync-card">
+                        <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px;">📤 上傳到雲端</h4>
+                        <button class="btn btn-success" onclick="syncToCloud()" style="width: 100%; margin-bottom: 20px;">
+                            ☁️ 同步學員到雲端
+                        </button>
+                        <p style="font-size: 14px; color: #666; line-height: 1.6;">
+                            將本地學員資料上傳到 Google Sheets<br>
+                            <strong>注意：</strong>會覆蓋雲端現有資料
+                        </p>
+                    </div>
+                    <div class="sync-card">
+                        <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">�� 從雲端載入</h4>
+                        <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 20px;">
+                            📥 從雲端載入
+                        </button>
+                        <p style="font-size: 14px; color: #666; line-height: 1.6;">
+                            從 Google Sheets 載入學員資料<br>
+                            <strong>注意：</strong>會覆蓋本地現有資料
+                        </p>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px; padding: 25px; background: rgba(248,249,250,0.8); border-radius: 15px;">
+                    <h4 style="color: #333; margin-bottom: 15px; font-size: 18px;">📋 同步狀態</h4>
+                    <p id="syncStatus" style="color: #666; font-size: 16px;">尚未進行同步操作</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 統計報表標籤 -->
+        <div id="statsTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">📊 統計報表</h3>
+                <div class="stats-grid">
+                    <div class="stat-card" style="border-left-color: #007bff;">
+                        <h4 style="color: #007bff; margin-bottom: 15px; font-size: 18px;">總學員數</h4>
+                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="totalStudents">0</p>
+                        <small style="color: #666;">全部學員</small>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #28a745;">
+                        <h4 style="color: #28a745; margin-bottom: 15px; font-size: 18px;">在讀學員</h4>
+                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="activeStudents">0</p>
+                        <small style="color: #666;">目前就讀</small>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #ffc107;">
+                        <h4 style="color: #f39c12; margin-bottom: 15px; font-size: 18px;">休學學員</h4>
+                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="suspendedStudents">0</p>
+                        <small style="color: #666;">暫時休學</small>
+                    </div>
+                    <div class="stat-card" style="border-left-color: #6c757d;">
+                        <h4 style="color: #6c757d; margin-bottom: 15px; font-size: 18px;">畢業學員</h4>
+                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="graduatedStudents">0</p>
+                        <small style="color: #666;">已經畢業</small>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 40px; text-align: center;">
+                    <button class="btn btn-primary" onclick="updateStatistics()">🔄 更新統計</button>
+                    <button class="btn btn-success" onclick="exportStudentList()">📄 匯出學員清單</button>
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- 通知元素 -->
     <div id="notification" class="notification"></div>
 
     <script>
+        // 全域變數
         let students = [];
 
         // 初始化
-        document.addEventListener('DOMContentLoaded', () => {
-            loadStudents();
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log('🚀 學員管理系統啟動中...');
+            showNotification('歡迎使用學員管理系統！', 'success');
+            await checkServerStatus();
+            await loadStudents();
+            await loadFromCloudSilently();
+            updateStatistics();
         });
 
-        // 載入學員
-        function loadStudents() {
-            const localData = localStorage.getItem('studentData');
-            if (localData) {
-                students = JSON.parse(localData);
+        // 檢查伺服器狀態
+        async function checkServerStatus() {
+            try {
+                document.getElementById('statusText').textContent = '檢測中...';
+                const response = await fetch('/api/get-students');
+                
+                if (response.ok) {
+                    document.getElementById('serverStatus').className = 'status-indicator status-online';
+                    document.getElementById('statusText').textContent = '線上';
+                    console.log('✅ API 伺服器連線正常');
+                    showNotification('雲端服務已連接', 'success');
+                } else {
+                    throw new Error(\`HTTP \${response.status}\`);
+                }
+            } catch (error) {
+                document.getElementById('serverStatus').className = 'status-indicator status-offline';
+                document.getElementById('statusText').textContent = '離線';
+                console.log('⚠️ API 伺服器離線，使用本地模式');
+                showNotification('使用本地模式（雲端功能暫不可用）', 'warning');
             }
-            displayStudents();
         }
 
-        // 顯示學員列表
-        function displayStudents() {
-            const list = document.getElementById('studentList');
-            if (students.length === 0) {
-                list.innerHTML = '<div style="text-align: center; padding: 20px; color: #666;">還沒有學員資料</div>';
-                return;
+        // 標籤頁切換
+        function showTab(tabName, element) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            if (element) {
+                element.classList.add('active');
             }
+            document.getElementById(tabName + 'Tab').classList.add('active');
+            
+            if (tabName === 'stats') {
+                updateStatistics();
+            }
+        }
 
-            list.innerHTML = students.map(student => `
-                <div class="student-item">
-                    <div>
-                        <strong>${student.name}</strong> - ${student.class || '未分配班別'}
-                    </div>
-                    <button class="btn btn-danger" onclick="deleteStudent('${student.id}')">刪除</button>
-                </div>
-            `).join('');
+        // 顯示通知
+        function showNotification(message, type = 'success') {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = \`notification \${type} show\`;
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 5000);
         }
 
         // 新增學員
-        function addStudent() {
+        async function addStudent() {
             const name = document.getElementById('studentName').value.trim();
-            const className = document.getElementById('studentClass').value;
-            
             if (!name) {
                 showNotification('請輸入學員姓名', 'error');
                 return;
@@ -108,39 +395,256 @@
             const student = {
                 id: Date.now().toString(),
                 name: name,
-                class: className,
-                createdAt: new Date().toLocaleDateString()
+                nickname: document.getElementById('studentNickname').value.trim(),
+                class: document.getElementById('studentClass').value,
+                phone: document.getElementById('studentPhone').value.trim(),
+                email: document.getElementById('studentEmail').value.trim(),
+                status: document.getElementById('studentStatus').value,
+                remarks: document.getElementById('studentRemarks').value.trim(),
+                createdAt: new Date().toLocaleDateString('zh-TW')
             };
 
             students.push(student);
             localStorage.setItem('studentData', JSON.stringify(students));
             
-            // 清空表單
+            clearForm();
+            displayStudents();
+            updateStatistics();
+            showNotification(\`✅ 學員「\${name}」已成功新增\`, 'success');
+            
+            setTimeout(() => {
+                syncToCloudSilently();
+            }, 1000);
+        }
+
+        // 清空表單
+        function clearForm() {
             document.getElementById('studentName').value = '';
+            document.getElementById('studentNickname').value = '';
             document.getElementById('studentClass').value = '';
+            document.getElementById('studentPhone').value = '';
+            document.getElementById('studentEmail').value = '';
+            document.getElementById('studentStatus').value = '在讀';
+            document.getElementById('studentRemarks').value = '';
+        }
+
+        // 載入學員資料
+        async function loadStudents() {
+            const localData = localStorage.getItem('studentData');
+            if (localData) {
+                try {
+                    students = JSON.parse(localData);
+                    console.log(\`📚 載入 \${students.length} 筆本地學員資料\`);
+                } catch (error) {
+                    console.error('本地資料解析失敗:', error);
+                    students = [];
+                }
+            } else {
+                students = [];
+            }
             
             displayStudents();
-            showNotification('學員新增成功', 'success');
+            updateStatistics();
+        }
+
+        // 顯示學員列表
+        function displayStudents() {
+            const list = document.getElementById('studentList');
+            
+            if (students.length === 0) {
+                list.innerHTML = \`
+                    <div class="empty-state">
+                        <h3>📚 還沒有學員資料</h3>
+                        <p>點擊上方的「新增學員」按鈕開始建立你的學員名冊<br>
+                        所有資料會安全地儲存在你的瀏覽器中</p>
+                    </div>
+                \`;
+                return;
+            }
+
+            list.innerHTML = students.map(student => \`
+                <div class="student-item">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
+                            \${student.name}
+                            \${student.nickname ? \`<span style="color: #666; font-weight: 400; font-size: 16px;">(\${student.nickname})</span>\` : ''}
+                        </div>
+                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
+                            <span style="margin-right: 20px; background: #e3f2fd; padding: 4px 12px; border-radius: 20px; color: #1976d2;">
+                                📚 \${student.class || '未分配班別'}
+                            </span>
+                            <span style="color: \${getStatusColor(student.status)}; font-weight: 600;">
+                                ● \${student.status}
+                            </span>
+                        </div>
+                        <div style="color: #999; font-size: 13px;">
+                            📅 \${student.createdAt} 建立
+                            \${student.phone ? \` | 📞 \${student.phone}\` : ''}
+                            \${student.email ? \` | 📧 \${student.email}\` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteStudent('\${student.id}')" 
+                                title="刪除學員" style="padding: 10px 15px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            \`).join('');
+        }
+
+        // 取得狀態顏色
+        function getStatusColor(status) {
+            switch (status) {
+                case '在讀': return '#28a745';
+                case '休學': return '#ffc107';
+                case '畢業': return '#6c757d';
+                case '退學': return '#dc3545';
+                default: return '#007bff';
+            }
         }
 
         // 刪除學員
         function deleteStudent(id) {
-            if (confirm('確定要刪除此學員嗎？')) {
+            const student = students.find(s => s.id === id);
+            if (!student) return;
+            
+            if (confirm(\`⚠️ 確定要刪除學員「\${student.name}」嗎？\\n\\n此操作無法復原，請謹慎考慮。\`)) {
                 students = students.filter(s => s.id !== id);
                 localStorage.setItem('studentData', JSON.stringify(students));
                 displayStudents();
-                showNotification('學員已刪除', 'success');
+                updateStatistics();
+                showNotification(\`��️ 學員「\${student.name}」已刪除\`, 'warning');
             }
         }
 
-        // 顯示通知
-        function showNotification(message, type) {
-            const notification = document.getElementById('notification');
-            notification.textContent = message;
-            notification.className = `notification ${type} show`;
-            setTimeout(() => {
-                notification.classList.remove('show');
-            }, 3000);
+        // 同步到雲端
+        async function syncToCloud() {
+            if (students.length === 0) {
+                showNotification('沒有學員資料可同步', 'warning');
+                return;
+            }
+
+            try {
+                showNotification('正在同步到雲端...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
+                
+                const response = await fetch('/api/sync-students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ students })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(\`✅ \${result.message}\`, 'success');
+                    document.getElementById('syncStatus').textContent = \`✅ \${result.message} (\${new Date().toLocaleString('zh-TW')})\`;
+                } else {
+                    throw new Error(result.error);
+                }
+            } catch (error) {
+                console.error('同步失敗:', error);
+                showNotification('❌ 同步失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = \`❌ 同步失敗: \${error.message}\`;
+            }
+        }
+
+        // 靜默同步到雲端
+        async function syncToCloudSilently() {
+            if (students.length === 0) return;
+            try {
+                await fetch('/api/sync-students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ students })
+                });
+                console.log(\`🔄 自動同步 \${students.length} 筆學員資料到雲端\`);
+            } catch (error) {
+                console.log('🔄 自動同步失敗');
+            }
+        }
+
+        // 從雲端載入
+        async function loadFromCloud() {
+            try {
+                showNotification('正在從雲端載入...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入資料...';
+                
+                const response = await fetch('/api/get-students');
+                const result = await response.json();
+                
+                if (result.success && result.students) {
+                    students = result.students;
+                    localStorage.setItem('studentData', JSON.stringify(students));
+                    displayStudents();
+                    updateStatistics();
+                    showNotification(\`✅ 成功載入 \${result.count} 筆學員資料\`, 'success');
+                    document.getElementById('syncStatus').textContent = \`✅ 成功載入 \${result.count} 筆資料 (\${new Date().toLocaleString('zh-TW')})\`;
+                } else {
+                    throw new Error(result.error || '載入失敗');
+                }
+            } catch (error) {
+                console.error('載入失敗:', error);
+                showNotification('❌ 載入失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = \`❌ 載入失敗: \${error.message}\`;
+            }
+        }
+
+        // 靜默從雲端載入
+        async function loadFromCloudSilently() {
+            try {
+                const response = await fetch('/api/get-students');
+                const result = await response.json();
+                
+                if (result.success && result.students && result.students.length > 0) {
+                    if (result.students.length >= students.length) {
+                        students = result.students;
+                        localStorage.setItem('studentData', JSON.stringify(students));
+                        displayStudents();
+                        console.log(\`🔄 自動載入 \${result.count} 筆雲端學員資料\`);
+                    }
+                }
+            } catch (error) {
+                console.log('📱 使用本地模式');
+            }
+        }
+
+        // 更新統計
+        function updateStatistics() {
+            const total = students.length;
+            const active = students.filter(s => s.status === '在讀').length;
+            const suspended = students.filter(s => s.status === '休學').length;
+            const graduated = students.filter(s => s.status === '畢業').length;
+
+            document.getElementById('totalStudents').textContent = total;
+            document.getElementById('activeStudents').textContent = active;
+            document.getElementById('suspendedStudents').textContent = suspended;
+            document.getElementById('graduatedStudents').textContent = graduated;
+        }
+
+        // 匯出學員清單
+        function exportStudentList() {
+            if (students.length === 0) {
+                showNotification('沒有學員資料可匯出', 'warning');
+                return;
+            }
+
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "學員姓名,別名,班別,電話,信箱,狀態,建立日期,備註\\n"
+                + students.map(student => 
+                    \`"\${student.name}","\${student.nickname || ''}","\${student.class || ''}","\${student.phone || ''}","\${student.email || ''}","\${student.status}","\${student.createdAt}","\${student.remarks || ''}"\`
+                ).join("\\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", \`學員清單_\${new Date().toLocaleDateString('zh-TW').replace(/\\//g, '-')}.csv\`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showNotification(\`📄 學員清單已匯出 (\${students.length} 筆資料)\`, 'success');
         }
     </script>
 </body>
