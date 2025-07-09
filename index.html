@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>學員管理系統 - 完整版本 v2.1</title>
+    <title>學員管理系統 - Vercel版 v2.1</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -267,7 +267,7 @@
                         </p>
                     </div>
                     <div class="sync-card">
-                        <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">�� 從雲端載入</h4>
+                        <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">📥 從雲端載入</h4>
                         <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 20px;">
                             📥 從雲端載入
                         </button>
@@ -339,19 +339,37 @@
 
         // 檢查伺服器狀態
         async function checkServerStatus() {
+            console.log('🔍 開始檢查伺服器狀態...');
+            
             try {
                 document.getElementById('statusText').textContent = '檢測中...';
-                const response = await fetch('/api/get-students');
+                
+                // 使用絕對路徑確保正確訪問
+                const apiUrl = window.location.origin + '/api/get-students';
+                console.log('📡 API URL:', apiUrl);
+                
+                const response = await fetch(apiUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                });
+                
+                console.log('📡 Response status:', response.status);
                 
                 if (response.ok) {
+                    const result = await response.json();
+                    console.log('✅ API 響應:', result);
+                    
                     document.getElementById('serverStatus').className = 'status-indicator status-online';
                     document.getElementById('statusText').textContent = '線上';
                     console.log('✅ API 伺服器連線正常');
                     showNotification('雲端服務已連接', 'success');
                 } else {
-                    throw new Error(\`HTTP \${response.status}\`);
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
             } catch (error) {
+                console.error('❌ API 連接失敗:', error);
                 document.getElementById('serverStatus').className = 'status-indicator status-offline';
                 document.getElementById('statusText').textContent = '離線';
                 console.log('⚠️ API 伺服器離線，使用本地模式');
@@ -378,7 +396,7 @@
         function showNotification(message, type = 'success') {
             const notification = document.getElementById('notification');
             notification.textContent = message;
-            notification.className = \`notification \${type} show\`;
+            notification.className = `notification ${type} show`;
             setTimeout(() => {
                 notification.classList.remove('show');
             }, 5000);
@@ -410,7 +428,7 @@
             clearForm();
             displayStudents();
             updateStatistics();
-            showNotification(\`✅ 學員「\${name}」已成功新增\`, 'success');
+            showNotification(`✅ 學員「${name}」已成功新增`, 'success');
             
             setTimeout(() => {
                 syncToCloudSilently();
@@ -434,7 +452,7 @@
             if (localData) {
                 try {
                     students = JSON.parse(localData);
-                    console.log(\`📚 載入 \${students.length} 筆本地學員資料\`);
+                    console.log(`📚 載入 ${students.length} 筆本地學員資料`);
                 } catch (error) {
                     console.error('本地資料解析失敗:', error);
                     students = [];
@@ -452,45 +470,45 @@
             const list = document.getElementById('studentList');
             
             if (students.length === 0) {
-                list.innerHTML = \`
+                list.innerHTML = `
                     <div class="empty-state">
                         <h3>📚 還沒有學員資料</h3>
                         <p>點擊上方的「新增學員」按鈕開始建立你的學員名冊<br>
                         所有資料會安全地儲存在你的瀏覽器中</p>
                     </div>
-                \`;
+                `;
                 return;
             }
 
-            list.innerHTML = students.map(student => \`
+            list.innerHTML = students.map(student => `
                 <div class="student-item">
                     <div>
                         <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
-                            \${student.name}
-                            \${student.nickname ? \`<span style="color: #666; font-weight: 400; font-size: 16px;">(\${student.nickname})</span>\` : ''}
+                            ${student.name}
+                            ${student.nickname ? `<span style="color: #666; font-weight: 400; font-size: 16px;">(${student.nickname})</span>` : ''}
                         </div>
                         <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
                             <span style="margin-right: 20px; background: #e3f2fd; padding: 4px 12px; border-radius: 20px; color: #1976d2;">
-                                📚 \${student.class || '未分配班別'}
+                                📚 ${student.class || '未分配班別'}
                             </span>
-                            <span style="color: \${getStatusColor(student.status)}; font-weight: 600;">
-                                ● \${student.status}
+                            <span style="color: ${getStatusColor(student.status)}; font-weight: 600;">
+                                ● ${student.status}
                             </span>
                         </div>
                         <div style="color: #999; font-size: 13px;">
-                            📅 \${student.createdAt} 建立
-                            \${student.phone ? \` | 📞 \${student.phone}\` : ''}
-                            \${student.email ? \` | 📧 \${student.email}\` : ''}
+                            📅 ${student.createdAt} 建立
+                            ${student.phone ? ` | 📞 ${student.phone}` : ''}
+                            ${student.email ? ` | 📧 ${student.email}` : ''}
                         </div>
                     </div>
                     <div>
-                        <button class="btn btn-danger" onclick="deleteStudent('\${student.id}')" 
+                        <button class="btn btn-danger" onclick="deleteStudent('${student.id}')" 
                                 title="刪除學員" style="padding: 10px 15px;">
                             🗑️
                         </button>
                     </div>
                 </div>
-            \`).join('');
+            `).join('');
         }
 
         // 取得狀態顏色
@@ -509,12 +527,12 @@
             const student = students.find(s => s.id === id);
             if (!student) return;
             
-            if (confirm(\`⚠️ 確定要刪除學員「\${student.name}」嗎？\\n\\n此操作無法復原，請謹慎考慮。\`)) {
+            if (confirm(`⚠️ 確定要刪除學員「${student.name}」嗎？\n\n此操作無法復原，請謹慎考慮。`)) {
                 students = students.filter(s => s.id !== id);
                 localStorage.setItem('studentData', JSON.stringify(students));
                 displayStudents();
                 updateStatistics();
-                showNotification(\`��️ 學員「\${student.name}」已刪除\`, 'warning');
+                showNotification(`🗑️ 學員「${student.name}」已刪除`, 'warning');
             }
         }
 
@@ -529,7 +547,7 @@
                 showNotification('正在同步到雲端...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
                 
-                const response = await fetch('/api/sync-students', {
+                const response = await fetch(window.location.origin + '/api/sync-students', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ students })
@@ -538,15 +556,15 @@
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification(\`✅ \${result.message}\`, 'success');
-                    document.getElementById('syncStatus').textContent = \`✅ \${result.message} (\${new Date().toLocaleString('zh-TW')})\`;
+                    showNotification(`✅ ${result.message}`, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ ${result.message} (${new Date().toLocaleString('zh-TW')})`;
                 } else {
                     throw new Error(result.error);
                 }
             } catch (error) {
                 console.error('同步失敗:', error);
                 showNotification('❌ 同步失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = \`❌ 同步失敗: \${error.message}\`;
+                document.getElementById('syncStatus').textContent = `❌ 同步失敗: ${error.message}`;
             }
         }
 
@@ -554,12 +572,12 @@
         async function syncToCloudSilently() {
             if (students.length === 0) return;
             try {
-                await fetch('/api/sync-students', {
+                await fetch(window.location.origin + '/api/sync-students', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ students })
                 });
-                console.log(\`🔄 自動同步 \${students.length} 筆學員資料到雲端\`);
+                console.log(`🔄 自動同步 ${students.length} 筆學員資料到雲端`);
             } catch (error) {
                 console.log('🔄 自動同步失敗');
             }
@@ -571,7 +589,7 @@
                 showNotification('正在從雲端載入...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入資料...';
                 
-                const response = await fetch('/api/get-students');
+                const response = await fetch(window.location.origin + '/api/get-students');
                 const result = await response.json();
                 
                 if (result.success && result.students) {
@@ -579,22 +597,22 @@
                     localStorage.setItem('studentData', JSON.stringify(students));
                     displayStudents();
                     updateStatistics();
-                    showNotification(\`✅ 成功載入 \${result.count} 筆學員資料\`, 'success');
-                    document.getElementById('syncStatus').textContent = \`✅ 成功載入 \${result.count} 筆資料 (\${new Date().toLocaleString('zh-TW')})\`;
+                    showNotification(`✅ 成功載入 ${result.count} 筆學員資料`, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 筆資料 (${new Date().toLocaleString('zh-TW')})`;
                 } else {
                     throw new Error(result.error || '載入失敗');
                 }
             } catch (error) {
                 console.error('載入失敗:', error);
                 showNotification('❌ 載入失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = \`❌ 載入失敗: \${error.message}\`;
+                document.getElementById('syncStatus').textContent = `❌ 載入失敗: ${error.message}`;
             }
         }
 
         // 靜默從雲端載入
         async function loadFromCloudSilently() {
             try {
-                const response = await fetch('/api/get-students');
+                const response = await fetch(window.location.origin + '/api/get-students');
                 const result = await response.json();
                 
                 if (result.success && result.students && result.students.length > 0) {
@@ -602,7 +620,7 @@
                         students = result.students;
                         localStorage.setItem('studentData', JSON.stringify(students));
                         displayStudents();
-                        console.log(\`🔄 自動載入 \${result.count} 筆雲端學員資料\`);
+                        console.log(`🔄 自動載入 ${result.count} 筆雲端學員資料`);
                     }
                 }
             } catch (error) {
@@ -631,21 +649,21 @@
             }
 
             const csvContent = "data:text/csv;charset=utf-8," 
-                + "學員姓名,別名,班別,電話,信箱,狀態,建立日期,備註\\n"
+                + "學員姓名,別名,班別,電話,信箱,狀態,建立日期,備註\n"
                 + students.map(student => 
-                    \`"\${student.name}","\${student.nickname || ''}","\${student.class || ''}","\${student.phone || ''}","\${student.email || ''}","\${student.status}","\${student.createdAt}","\${student.remarks || ''}"\`
-                ).join("\\n");
+                    `"${student.name}","${student.nickname || ''}","${student.class || ''}","${student.phone || ''}","${student.email || ''}","${student.status}","${student.createdAt}","${student.remarks || ''}"`
+                ).join("\n");
 
             const encodedUri = encodeURI(csvContent);
             const link = document.createElement("a");
             link.setAttribute("href", encodedUri);
-            link.setAttribute("download", \`學員清單_\${new Date().toLocaleDateString('zh-TW').replace(/\\//g, '-')}.csv\`);
+            link.setAttribute("download", `學員清單_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '-')}.csv`);
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             
-            showNotification(\`📄 學員清單已匯出 (\${students.length} 筆資料)\`, 'success');
+            showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
         }
     </script>
 </body>
-</html>
+</html> 
