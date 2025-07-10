@@ -203,13 +203,7 @@
                         <label>班別</label>
                         <select id="studentClass">
                             <option value="">請選擇班別</option>
-                            <option value="數學班">數學班</option>
-                            <option value="英文班">英文班</option>
-                            <option value="中文班">中文班</option>
-                            <option value="科學班">科學班</option>
-                            <option value="音樂班">音樂班</option>
-                            <option value="美術班">美術班</option>
-                            <option value="體育班">體育班</option>
+                            <!-- 班別選項將從 Google Sheets 動態載入 -->
                         </select>
                     </div>
                     <div class="form-group">
@@ -258,8 +252,11 @@
                 <div class="sync-grid">
                     <div class="sync-card">
                         <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px;">📤 上傳到雲端</h4>
-                        <button class="btn btn-success" onclick="syncToCloud()" style="width: 100%; margin-bottom: 20px;">
+                        <button class="btn btn-success" onclick="syncToCloud()" style="width: 100%; margin-bottom: 15px;">
                             ☁️ 同步學員到雲端
+                        </button>
+                        <button class="btn btn-success" onclick="loadClasses()" style="width: 100%; margin-bottom: 20px;">
+                            📚 載入班別資料
                         </button>
                         <p style="font-size: 14px; color: #666; line-height: 1.6;">
                             將本地學員資料上傳到 Google Sheets<br>
@@ -268,11 +265,14 @@
                     </div>
                     <div class="sync-card">
                         <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">📥 從雲端載入</h4>
-                        <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 20px;">
-                            📥 從雲端載入
+                        <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 15px;">
+                            📥 從雲端載入學員
+                        </button>
+                        <button class="btn btn-primary" onclick="loadSchedule()" style="width: 100%; margin-bottom: 20px;">
+                            📅 載入課堂資料
                         </button>
                         <p style="font-size: 14px; color: #666; line-height: 1.6;">
-                            從 Google Sheets 載入學員資料<br>
+                            從 Google Sheets 載入資料<br>
                             <strong>注意：</strong>會覆蓋本地現有資料
                         </p>
                     </div>
@@ -334,6 +334,7 @@
             await checkServerStatus();
             await loadStudents();
             await loadFromCloudSilently();
+            await loadClassesSilently();
             updateStatistics();
         });
 
@@ -663,6 +664,84 @@
             document.body.removeChild(link);
             
             showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
+        }
+
+        // 載入班別資料
+        async function loadClasses() {
+            try {
+                showNotification('正在載入班別資料...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
+                
+                const response = await fetch(window.location.origin + '/api/get-classes');
+                const result = await response.json();
+                
+                if (result.success && result.classes) {
+                    updateClassOptions(result.classes);
+                    showNotification(`✅ 成功載入 ${result.count} 個班別`, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 個班別 (${new Date().toLocaleString('zh-TW')})`;
+                } else {
+                    throw new Error(result.error || '載入班別失敗');
+                }
+            } catch (error) {
+                console.error('載入班別失敗:', error);
+                showNotification('❌ 載入班別失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
+            }
+        }
+
+        // 靜默載入班別資料
+        async function loadClassesSilently() {
+            try {
+                const response = await fetch(window.location.origin + '/api/get-classes');
+                const result = await response.json();
+                
+                if (result.success && result.classes && result.classes.length > 0) {
+                    updateClassOptions(result.classes);
+                    console.log(`🔄 自動載入 ${result.count} 個班別`);
+                }
+            } catch (error) {
+                console.log('📱 使用預設班別選項');
+                // 使用預設班別選項
+                updateClassOptions(['數學班', '英文班', '中文班', '科學班', '音樂班', '美術班', '體育班']);
+            }
+        }
+
+        // 更新班別選項
+        function updateClassOptions(classes) {
+            const select = document.getElementById('studentClass');
+            select.innerHTML = '<option value="">請選擇班別</option>';
+            
+            classes.forEach(className => {
+                if (className && className.trim()) {
+                    const option = document.createElement('option');
+                    option.value = className.trim();
+                    option.textContent = className.trim();
+                    select.appendChild(option);
+                }
+            });
+        }
+
+        // 載入課堂資料
+        async function loadSchedule() {
+            try {
+                showNotification('正在載入課堂資料...', 'warning');
+                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入課堂資料...';
+                
+                const response = await fetch(window.location.origin + '/api/get-schedule');
+                const result = await response.json();
+                
+                if (result.success && result.schedule) {
+                    console.log('📅 課堂資料:', result.schedule);
+                    showNotification(`✅ 成功載入 ${result.count} 堂課程`, 'success');
+                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 堂課程 (${new Date().toLocaleString('zh-TW')})`;
+                } else {
+                    throw new Error(result.error || '載入課堂資料失敗');
+                }
+            } catch (error) {
+                console.error('載入課堂資料失敗:', error);
+                showNotification('❌ 載入課堂資料失敗: ' + error.message, 'error');
+                document.getElementById('syncStatus').textContent = `❌ 載入課堂資料失敗: ${error.message}`;
+            }
         }
     </script>
 </body>
