@@ -6,8 +6,8 @@ const SPREADSHEET_ID = 'YOUR_SPREADSHEET_ID_HERE'; // 請替換為你的 Google 
 
 // 工作表名稱
 const STUDENTS_SHEET = '學員資料'; // 學員資料工作表
-const CLASSES_SHEET = '班組資料';   // 班別資料工作表  
-const SCHEDULE_SHEET = '課堂資料';  // 課堂資料工作表
+const CLASSES_SHEET = 'schedule';   // 班別資料工作表（和課堂資料是同一個）
+const SCHEDULE_SHEET = 'schedule';  // 課堂資料工作表（和班別資料是同一個）
 
 function doGet(e) {
   const action = e.parameter.action;
@@ -78,17 +78,17 @@ function getStudents() {
     
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (row[0]) { // 如果有姓名
+      if (row[1]) { // 如果有姓名（B 欄）
         students.push({
-          id: row[0] + '_' + Date.now() + '_' + i,
-          name: row[0] || '',
-          nickname: row[1] || '',
-          class: row[2] || '',
-          phone: row[3] || '',
-          email: row[4] || '',
-          status: row[5] || '在讀',
-          createdAt: row[6] || new Date().toISOString(),
-          remarks: row[7] || ''
+          id: row[0] || ('student_' + Date.now() + '_' + i),  // A 欄: id
+          name: row[1] || '',         // B 欄: name
+          nickname: row[2] || '',     // C 欄: nickname
+          class: row[3] || '',        // D 欄: class
+          phone: row[4] || '',        // E 欄: phone
+          email: row[5] || '',        // F 欄: email
+          status: row[6] || '在讀',   // G 欄: status
+          remarks: row[7] || '',      // H 欄: remarks
+          createdAt: row[8] || new Date().toISOString() // I 欄: createdAt
         });
       }
     }
@@ -115,13 +115,19 @@ function getClasses() {
       throw new Error(`找不到工作表: ${CLASSES_SHEET}`);
     }
     
-    // 讀取 B 欄資料，從 B2 開始
-    const range = sheet.getRange('B2:B'); // 從 B2 開始讀取到最後一行
-    const values = range.getValues();
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      return ContentService.createTextOutput(JSON.stringify({
+        success: true,
+        classes: [],
+        count: 0
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
     
     const classes = [];
-    for (let i = 0; i < values.length; i++) {
-      const className = values[i][0];
+    // 從第二行開始讀取 B 欄（名稱）
+    for (let i = 1; i < data.length; i++) {
+      const className = data[i][1]; // B 欄是 index 1
       if (className && className.toString().trim()) {
         classes.push(className.toString().trim());
       }
@@ -158,21 +164,18 @@ function getSchedule() {
       })).setMimeType(ContentService.MimeType.JSON);
     }
     
-    const headers = data[0];
     const schedule = [];
     
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (row[0]) { // 如果有課程名稱
+      if (row[0]) { // 如果有 ID
         schedule.push({
-          id: 'schedule_' + Date.now() + '_' + i,
-          className: row[0] || '',
-          teacher: row[1] || '',
-          time: row[2] || '',
-          date: row[3] || '',
-          students: row[4] || '',
-          location: row[5] || '',
-          remarks: row[6] || ''
+          id: row[0] || '',           // A 欄: ID
+          name: row[1] || '',         // B 欄: 名稱
+          startTime: row[2] || '',    // C 欄: 開始時間
+          endTime: row[3] || '',      // D 欄: 結束時間
+          weekday: row[4] || '',      // E 欄: 星期
+          description: row[5] || ''   // F 欄: 描述
         });
       }
     }
@@ -206,20 +209,21 @@ function syncStudents(students) {
     }
     
     // 設定標題行（如果沒有的話）
-    const headers = ['姓名', '別名', '班別', '電話', '信箱', '狀態', '建立日期', '備註'];
+    const headers = ['id', 'name', 'nickname', 'class', 'phone', 'email', 'status', 'remarks', 'createdAt'];
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     
     // 添加學員資料
     if (students && students.length > 0) {
       const rows = students.map(student => [
+        student.id || '',
         student.name || '',
         student.nickname || '',
         student.class || '',
         student.phone || '',
         student.email || '',
         student.status || '在讀',
-        student.createdAt || new Date().toISOString(),
-        student.remarks || ''
+        student.remarks || '',
+        student.createdAt || new Date().toISOString()
       ]);
       
       sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
