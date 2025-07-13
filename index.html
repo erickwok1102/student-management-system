@@ -181,7 +181,9 @@
 
         <!-- 標籤頁導航 -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('students', this)">👥 學員管理</button>
+            <button class="tab active" onclick="showTab('students', this)">👥 學員資料</button>
+            <button class="tab" onclick="showTab('classes', this)">📚 班組資料</button>
+            <button class="tab" onclick="showTab('attendance', this)">✅ 出席記錄</button>
             <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
             <button class="tab" onclick="showTab('stats', this)">📊 統計報表</button>
         </div>
@@ -238,6 +240,120 @@
             <div class="card">
                 <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
                 <div class="student-list" id="studentList">
+                    <div class="empty-state">
+                        <h3>🔄 載入中...</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 班組資料標籤 -->
+        <div id="classesTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📚 班組資料管理</h3>
+                
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>班組 ID</label>
+                        <input type="text" id="classId" placeholder="例如：SKW0001">
+                    </div>
+                    <div class="form-group">
+                        <label>班組名稱 *</label>
+                        <input type="text" id="className" placeholder="例如：青年班" required>
+                    </div>
+                    <div class="form-group">
+                        <label>開始時間</label>
+                        <input type="time" id="classStartTime" placeholder="例如：15:00">
+                    </div>
+                    <div class="form-group">
+                        <label>結束時間</label>
+                        <input type="time" id="classEndTime" placeholder="例如：19:00">
+                    </div>
+                    <div class="form-group">
+                        <label>星期</label>
+                        <select id="classWeekday">
+                            <option value="">請選擇星期</option>
+                            <option value="1">星期一</option>
+                            <option value="2">星期二</option>
+                            <option value="3">星期三</option>
+                            <option value="4">星期四</option>
+                            <option value="5">星期五</option>
+                            <option value="6">星期六</option>
+                            <option value="7">星期日</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="classDescription" placeholder="班組描述" rows="3"></textarea>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-success" onclick="addClass()">➕ 新增班組</button>
+                    <button class="btn btn-primary" onclick="loadClasses()">🔄 重新載入</button>
+                    <button class="btn btn-warning" onclick="clearClassForm()">🧹 清空表單</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 班組列表</h3>
+                <div class="student-list" id="classesList">
+                    <div class="empty-state">
+                        <h3>🔄 載入中...</h3>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 出席記錄標籤 -->
+        <div id="attendanceTab" class="tab-content">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">✅ 出席記錄管理</h3>
+                
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>日期 *</label>
+                        <input type="date" id="attendanceDate" required>
+                    </div>
+                    <script>
+                        // 設定預設日期為今天
+                        document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+                    </script>
+                    <div class="form-group">
+                        <label>班別 *</label>
+                        <select id="attendanceClass" required>
+                            <option value="">請選擇班別</option>
+                            <!-- 班別選項將從 Google Sheets 動態載入 -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>學員 *</label>
+                        <select id="attendanceStudent" required>
+                            <option value="">請先選擇班別</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>出席狀態 *</label>
+                        <select id="attendanceStatus" required>
+                            <option value="">請選擇狀態</option>
+                            <option value="出席">✅ 出席</option>
+                            <option value="缺席">❌ 缺席</option>
+                            <option value="請假">🏥 請假</option>
+                            <option value="遲到">⏰ 遲到</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-success" onclick="addAttendance()">➕ 記錄出席</button>
+                    <button class="btn btn-primary" onclick="loadAttendance()">🔄 重新載入</button>
+                    <button class="btn btn-warning" onclick="clearAttendanceForm()">🧹 清空表單</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 出席記錄</h3>
+                <div class="student-list" id="attendanceList">
                     <div class="empty-state">
                         <h3>🔄 載入中...</h3>
                     </div>
@@ -326,6 +442,8 @@
     <script>
         // 全域變數
         let students = [];
+        let classes = [];
+        let attendance = [];
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
@@ -335,6 +453,9 @@
             await loadStudents();
             await loadFromCloudSilently();
             await loadClassesSilently();
+            loadClassesData();
+            loadAttendance();
+            updateAttendanceOptions();
             updateStatistics();
         });
 
@@ -390,6 +511,11 @@
             
             if (tabName === 'stats') {
                 updateStatistics();
+            } else if (tabName === 'classes') {
+                displayClasses();
+            } else if (tabName === 'attendance') {
+                displayAttendance();
+                updateAttendanceOptions();
             }
         }
 
@@ -707,16 +833,24 @@
         }
 
         // 更新班別選項
-        function updateClassOptions(classes) {
-            const select = document.getElementById('studentClass');
-            select.innerHTML = '<option value="">請選擇班別</option>';
+        function updateClassOptions(classNames) {
+            const selects = [
+                document.getElementById('studentClass'),
+                document.getElementById('attendanceClass')
+            ];
             
-            classes.forEach(className => {
-                if (className && className.trim()) {
-                    const option = document.createElement('option');
-                    option.value = className.trim();
-                    option.textContent = className.trim();
-                    select.appendChild(option);
+            selects.forEach(select => {
+                if (select) {
+                    select.innerHTML = '<option value="">請選擇班別</option>';
+                    
+                    classNames.forEach(className => {
+                        if (className && className.trim()) {
+                            const option = document.createElement('option');
+                            option.value = className.trim();
+                            option.textContent = className.trim();
+                            select.appendChild(option);
+                        }
+                    });
                 }
             });
         }
@@ -731,6 +865,9 @@
                 const result = await response.json();
                 
                 if (result.success && result.schedule) {
+                    classes = result.schedule;
+                    localStorage.setItem('classesData', JSON.stringify(classes));
+                    displayClasses();
                     console.log('📅 課堂資料:', result.schedule);
                     showNotification(`✅ 成功載入 ${result.count} 堂課程`, 'success');
                     document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 堂課程 (${new Date().toLocaleString('zh-TW')})`;
@@ -742,6 +879,264 @@
                 showNotification('❌ 載入課堂資料失敗: ' + error.message, 'error');
                 document.getElementById('syncStatus').textContent = `❌ 載入課堂資料失敗: ${error.message}`;
             }
+        }
+
+        // 新增班組
+        function addClass() {
+            const id = document.getElementById('classId').value.trim();
+            const name = document.getElementById('className').value.trim();
+            const startTime = document.getElementById('classStartTime').value;
+            const endTime = document.getElementById('classEndTime').value;
+            const weekday = document.getElementById('classWeekday').value;
+            const description = document.getElementById('classDescription').value.trim();
+
+            if (!name) {
+                showNotification('請填寫班組名稱', 'error');
+                return;
+            }
+
+            const newClass = {
+                id: id || 'CLASS_' + Date.now(),
+                name: name,
+                startTime: startTime,
+                endTime: endTime,
+                weekday: weekday,
+                description: description,
+                createdAt: new Date().toLocaleString('zh-TW')
+            };
+
+            classes.push(newClass);
+            localStorage.setItem('classesData', JSON.stringify(classes));
+            displayClasses();
+            clearClassForm();
+            showNotification(`✅ 班組「${name}」新增成功`, 'success');
+        }
+
+        // 顯示班組列表
+        function displayClasses() {
+            const list = document.getElementById('classesList');
+            
+            if (classes.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>📚 還沒有班組資料</h3>
+                        <p>點擊上方的「新增班組」按鈕開始建立你的班組資料</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = classes.map(cls => `
+                <div class="student-item">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
+                            ${cls.name}
+                            ${cls.id ? `<span style="color: #666; font-weight: 400; font-size: 14px;">(${cls.id})</span>` : ''}
+                        </div>
+                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
+                            ${cls.startTime && cls.endTime ? `⏰ ${cls.startTime} - ${cls.endTime}` : ''}
+                            ${cls.weekday ? ` | 📅 星期${cls.weekday}` : ''}
+                        </div>
+                        <div style="color: #999; font-size: 13px;">
+                            ${cls.description ? `📝 ${cls.description}` : ''}
+                            ${cls.createdAt ? ` | 📅 ${cls.createdAt} 建立` : ''}
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteClass('${cls.id}')" 
+                                title="刪除班組" style="padding: 10px 15px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 刪除班組
+        function deleteClass(id) {
+            const cls = classes.find(c => c.id === id);
+            if (!cls) return;
+            
+            if (confirm(`⚠️ 確定要刪除班組「${cls.name}」嗎？\n\n此操作無法復原，請謹慎考慮。`)) {
+                classes = classes.filter(c => c.id !== id);
+                localStorage.setItem('classesData', JSON.stringify(classes));
+                displayClasses();
+                showNotification(`🗑️ 班組「${cls.name}」已刪除`, 'warning');
+            }
+        }
+
+        // 清空班組表單
+        function clearClassForm() {
+            document.getElementById('classId').value = '';
+            document.getElementById('className').value = '';
+            document.getElementById('classStartTime').value = '';
+            document.getElementById('classEndTime').value = '';
+            document.getElementById('classWeekday').value = '';
+            document.getElementById('classDescription').value = '';
+        }
+
+        // 載入班組資料
+        function loadClassesData() {
+            const saved = localStorage.getItem('classesData');
+            if (saved) {
+                classes = JSON.parse(saved);
+                displayClasses();
+            }
+        }
+
+        // 新增出席記錄
+        function addAttendance() {
+            const date = document.getElementById('attendanceDate').value;
+            const className = document.getElementById('attendanceClass').value;
+            const studentId = document.getElementById('attendanceStudent').value;
+            const status = document.getElementById('attendanceStatus').value;
+
+            if (!date || !className || !studentId || !status) {
+                showNotification('請填寫所有必填欄位', 'error');
+                return;
+            }
+
+            const student = students.find(s => s.id === studentId);
+            if (!student) {
+                showNotification('找不到該學員', 'error');
+                return;
+            }
+
+            const newAttendance = {
+                id: 'ATT_' + Date.now(),
+                date: date,
+                className: className,
+                studentId: studentId,
+                studentName: student.name,
+                status: status,
+                createdAt: new Date().toLocaleString('zh-TW')
+            };
+
+            attendance.push(newAttendance);
+            localStorage.setItem('attendanceData', JSON.stringify(attendance));
+            displayAttendance();
+            clearAttendanceForm();
+            showNotification(`✅ 出席記錄已新增`, 'success');
+        }
+
+        // 顯示出席記錄
+        function displayAttendance() {
+            const list = document.getElementById('attendanceList');
+            
+            if (attendance.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>✅ 還沒有出席記錄</h3>
+                        <p>點擊上方的「記錄出席」按鈕開始記錄學員出席狀況</p>
+                    </div>
+                `;
+                return;
+            }
+
+            // 按日期排序（最新的在前面）
+            const sortedAttendance = [...attendance].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            list.innerHTML = sortedAttendance.map(att => `
+                <div class="student-item">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
+                            ${att.studentName}
+                            <span style="color: ${getAttendanceColor(att.status)}; font-weight: 600; margin-left: 10px;">
+                                ${getAttendanceIcon(att.status)} ${att.status}
+                            </span>
+                        </div>
+                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
+                            📅 ${att.date} | 📚 ${att.className}
+                        </div>
+                        <div style="color: #999; font-size: 13px;">
+                            📝 ${att.createdAt} 記錄
+                        </div>
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteAttendance('${att.id}')" 
+                                title="刪除記錄" style="padding: 10px 15px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 獲取出席狀態顏色
+        function getAttendanceColor(status) {
+            switch (status) {
+                case '出席': return '#28a745';
+                case '缺席': return '#dc3545';
+                case '請假': return '#6c757d';
+                case '遲到': return '#ffc107';
+                default: return '#007bff';
+            }
+        }
+
+        // 獲取出席狀態圖標
+        function getAttendanceIcon(status) {
+            switch (status) {
+                case '出席': return '✅';
+                case '缺席': return '❌';
+                case '請假': return '🏥';
+                case '遲到': return '⏰';
+                default: return '📝';
+            }
+        }
+
+        // 刪除出席記錄
+        function deleteAttendance(id) {
+            const att = attendance.find(a => a.id === id);
+            if (!att) return;
+            
+            if (confirm(`⚠️ 確定要刪除「${att.studentName}」在 ${att.date} 的出席記錄嗎？\n\n此操作無法復原，請謹慎考慮。`)) {
+                attendance = attendance.filter(a => a.id !== id);
+                localStorage.setItem('attendanceData', JSON.stringify(attendance));
+                displayAttendance();
+                showNotification(`🗑️ 出席記錄已刪除`, 'warning');
+            }
+        }
+
+        // 清空出席記錄表單
+        function clearAttendanceForm() {
+            document.getElementById('attendanceDate').value = '';
+            document.getElementById('attendanceClass').value = '';
+            document.getElementById('attendanceStudent').value = '';
+            document.getElementById('attendanceStatus').value = '';
+        }
+
+        // 載入出席記錄
+        function loadAttendance() {
+            const saved = localStorage.getItem('attendanceData');
+            if (saved) {
+                attendance = JSON.parse(saved);
+                displayAttendance();
+            }
+        }
+
+        // 更新出席記錄的班別和學員選項
+        function updateAttendanceOptions() {
+            const classSelect = document.getElementById('attendanceClass');
+            const studentSelect = document.getElementById('attendanceStudent');
+            
+            // 更新班別選項
+            updateClassOptions(classes.map(c => c.name));
+            
+            // 監聽班別選擇變化
+            classSelect.addEventListener('change', function() {
+                const selectedClass = this.value;
+                studentSelect.innerHTML = '<option value="">請選擇學員</option>';
+                
+                if (selectedClass) {
+                    const classStudents = students.filter(s => s.class === selectedClass);
+                    classStudents.forEach(student => {
+                        const option = document.createElement('option');
+                        option.value = student.id;
+                        option.textContent = student.name;
+                        studentSelect.appendChild(option);
+                    });
+                }
+            });
         }
     </script>
 </body>
