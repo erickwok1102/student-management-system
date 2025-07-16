@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Apps Script 測試工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; 
+            background: #f5f7fa; color: #333; padding: 20px; line-height: 1.6;
+        }
+        .container { max-width: 800px; margin: 0 auto; }
+        .card { 
+            background: white; border-radius: 12px; padding: 24px; margin-bottom: 20px; 
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1); 
+        }
+        h1 { color: #2c3e50; margin-bottom: 24px; }
+        h2 { color: #34495e; margin-bottom: 16px; font-size: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: 600; color: #555; }
+        input, textarea { 
+            width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; 
+            font-size: 14px; transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus { outline: none; border-color: #3498db; }
+        button { 
+            background: #3498db; color: white; border: none; padding: 12px 24px; 
+            border-radius: 8px; cursor: pointer; font-size: 14px; font-weight: 600;
+            transition: background 0.3s; margin-right: 12px; margin-bottom: 12px;
+        }
+        button:hover { background: #2980b9; }
+        button.success { background: #27ae60; }
+        button.warning { background: #f39c12; }
+        button.danger { background: #e74c3c; }
+        .result { 
+            margin-top: 16px; padding: 16px; border-radius: 8px; 
+            white-space: pre-wrap; font-family: monospace; font-size: 13px;
+        }
+        .result.success { background: #d5f4e6; border: 1px solid #27ae60; color: #196f3d; }
+        .result.error { background: #fadbd8; border: 1px solid #e74c3c; color: #a93226; }
+        .result.info { background: #d6eaf8; border: 1px solid #3498db; color: #1b4f72; }
+        .step { 
+            background: #ecf0f1; padding: 16px; border-radius: 8px; margin-bottom: 16px;
+            border-left: 4px solid #3498db;
+        }
+        .step h3 { color: #2c3e50; margin-bottom: 8px; }
+        code { 
+            background: #f8f9fa; padding: 2px 6px; border-radius: 4px; 
+            font-family: 'SFMono-Regular', monospace; color: #e83e8c;
+        }
+        .warning { 
+            background: #fff3cd; border: 1px solid #ffeaa7; padding: 12px; 
+            border-radius: 8px; color: #856404; margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Google Apps Script 測試工具</h1>
+        
+        <div class="warning">
+            <strong>⚠️ 使用前須知：</strong> 此工具用於測試你的 Google Apps Script 設定是否正確。請確保你已經按照 <code>Google_Apps_Script_修復指南.md</code> 完成所有設定。
+        </div>
+
+        <div class="card">
+            <h2>第一步：設定測試參數</h2>
+            <div class="form-group">
+                <label>Google Apps Script Web App URL:</label>
+                <input type="text" id="scriptUrl" placeholder="https://script.google.com/macros/s/.../exec">
+                <small style="color: #666;">必須以 /exec 結尾</small>
+            </div>
+            <div class="form-group">
+                <label>Google Sheets ID:</label>
+                <input type="text" id="sheetId" placeholder="從 Google Sheets URL 中複製的 ID">
+            </div>
+            <button onclick="saveConfig()">💾 儲存設定</button>
+            <button onclick="loadConfig()" class="warning">📥 載入設定</button>
+        </div>
+
+        <div class="card">
+            <h2>第二步：測試連接</h2>
+            <div class="step">
+                <h3>測試 1: 基本連接測試</h3>
+                <p>測試 Google Apps Script 是否能正常回應</p>
+                <button onclick="testBasicConnection()">🔗 測試基本連接</button>
+                <div id="basicResult" class="result"></div>
+            </div>
+
+            <div class="step">
+                <h3>測試 2: 測試獲取班別</h3>
+                <p>測試是否能從 Google Sheets 讀取班別資料</p>
+                <button onclick="testGetClasses()">📚 測試載入班別</button>
+                <div id="classesResult" class="result"></div>
+            </div>
+
+            <div class="step">
+                <h3>測試 3: 測試獲取學員</h3>
+                <p>測試是否能從 Google Sheets 讀取學員資料</p>
+                <button onclick="testGetStudents()">👥 測試載入學員</button>
+                <div id="studentsResult" class="result"></div>
+            </div>
+
+            <div class="step">
+                <h3>測試 4: 測試同步學員資料</h3>
+                <p>測試是否能向 Google Sheets 寫入學員資料</p>
+                <button onclick="testSyncStudents()">📤 測試同步學員</button>
+                <div id="syncStudentsResult" class="result"></div>
+            </div>
+
+            <div class="step">
+                <h3>測試 5: 測試同步出席記錄</h3>
+                <p>測試是否能向 Google Sheets 寫入出席記錄</p>
+                <button onclick="testSyncAttendance()">📝 測試同步出席</button>
+                <div id="syncAttendanceResult" class="result"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2>第三步：完整測試報告</h2>
+            <button onclick="runAllTests()" class="success">🚀 執行所有測試</button>
+            <button onclick="clearAllResults()" class="danger">🗑️ 清除所有結果</button>
+            <div id="overallResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        let scriptUrl = '';
+        let sheetId = '';
+
+        function saveConfig() {
+            scriptUrl = document.getElementById('scriptUrl').value.trim();
+            sheetId = document.getElementById('sheetId').value.trim();
+            
+            localStorage.setItem('testScriptUrl', scriptUrl);
+            localStorage.setItem('testSheetId', sheetId);
+            
+            showResult('basicResult', '✅ 設定已儲存', 'success');
+        }
+
+        function loadConfig() {
+            scriptUrl = localStorage.getItem('testScriptUrl') || '';
+            sheetId = localStorage.getItem('testSheetId') || '';
+            
+            document.getElementById('scriptUrl').value = scriptUrl;
+            document.getElementById('sheetId').value = sheetId;
+            
+            showResult('basicResult', '✅ 設定已載入', 'success');
+        }
+
+        function showResult(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `result ${type}`;
+        }
+
+        async function testBasicConnection() {
+            if (!scriptUrl) {
+                showResult('basicResult', '❌ 請先輸入 Google Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                showResult('basicResult', '⏳ 正在測試基本連接...', 'info');
+                
+                const response = await fetch(scriptUrl + '?action=test', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const text = await response.text();
+                
+                if (response.ok) {
+                    showResult('basicResult', `✅ 連接成功！\nHTTP 狀態: ${response.status}\n回應內容: ${text}`, 'success');
+                } else {
+                    showResult('basicResult', `⚠️ HTTP 錯誤: ${response.status}\n回應內容: ${text}`, 'error');
+                }
+            } catch (error) {
+                showResult('basicResult', `❌ 連接失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetClasses() {
+            if (!scriptUrl) {
+                showResult('classesResult', '❌ 請先輸入 Google Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                showResult('classesResult', '⏳ 正在測試載入班別...', 'info');
+                
+                const response = await fetch(scriptUrl + '?action=getClasses', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showResult('classesResult', `❌ JSON 解析失敗:\n原始回應: ${text}`, 'error');
+                    return;
+                }
+
+                if (result.success) {
+                    showResult('classesResult', `✅ 成功載入班別！\n數量: ${result.count}\n班別: ${JSON.stringify(result.classes, null, 2)}`, 'success');
+                } else {
+                    showResult('classesResult', `❌ 載入失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('classesResult', `❌ 測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetStudents() {
+            if (!scriptUrl) {
+                showResult('studentsResult', '❌ 請先輸入 Google Apps Script URL', 'error');
+                return;
+            }
+
+            try {
+                showResult('studentsResult', '⏳ 正在測試載入學員...', 'info');
+                
+                const response = await fetch(scriptUrl + '?action=getStudents', {
+                    method: 'GET',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showResult('studentsResult', `❌ JSON 解析失敗:\n原始回應: ${text}`, 'error');
+                    return;
+                }
+
+                if (result.success) {
+                    showResult('studentsResult', `✅ 成功載入學員！\n數量: ${result.count}\n前3筆資料: ${JSON.stringify(result.students.slice(0, 3), null, 2)}`, 'success');
+                } else {
+                    showResult('studentsResult', `❌ 載入失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('studentsResult', `❌ 測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSyncStudents() {
+            if (!scriptUrl) {
+                showResult('syncStudentsResult', '❌ 請先輸入 Google Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = [{
+                id: 'test001',
+                name: '測試學員',
+                nickname: '測試',
+                class: '測試班',
+                phone: '0900000000',
+                email: 'test@example.com',
+                status: '在讀',
+                remarks: '測試資料',
+                createdAt: new Date().toISOString()
+            }];
+
+            try {
+                showResult('syncStudentsResult', '⏳ 正在測試同步學員...', 'info');
+                
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'syncStudents',
+                        students: testData
+                    })
+                });
+
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showResult('syncStudentsResult', `❌ JSON 解析失敗:\n原始回應: ${text}`, 'error');
+                    return;
+                }
+
+                if (result.success) {
+                    showResult('syncStudentsResult', `✅ 成功同步學員！\n訊息: ${result.message}`, 'success');
+                } else {
+                    showResult('syncStudentsResult', `❌ 同步失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('syncStudentsResult', `❌ 測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function testSyncAttendance() {
+            if (!scriptUrl) {
+                showResult('syncAttendanceResult', '❌ 請先輸入 Google Apps Script URL', 'error');
+                return;
+            }
+
+            const testData = [{
+                date: new Date().toISOString().split('T')[0],
+                class: '測試班',
+                studentId: 'test001',
+                studentName: '測試學員',
+                status: '出席'
+            }];
+
+            try {
+                showResult('syncAttendanceResult', '⏳ 正在測試同步出席...', 'info');
+                
+                const response = await fetch(scriptUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'syncAttendance',
+                        attendance: testData
+                    })
+                });
+
+                const text = await response.text();
+                let result;
+                
+                try {
+                    result = JSON.parse(text);
+                } catch (e) {
+                    showResult('syncAttendanceResult', `❌ JSON 解析失敗:\n原始回應: ${text}`, 'error');
+                    return;
+                }
+
+                if (result.success) {
+                    showResult('syncAttendanceResult', `✅ 成功同步出席記錄！\n訊息: ${result.message}`, 'success');
+                } else {
+                    showResult('syncAttendanceResult', `❌ 同步失敗: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                showResult('syncAttendanceResult', `❌ 測試失敗: ${error.message}`, 'error');
+            }
+        }
+
+        async function runAllTests() {
+            showResult('overallResult', '⏳ 正在執行所有測試...', 'info');
+            
+            const tests = [
+                { name: '基本連接', func: testBasicConnection, resultId: 'basicResult' },
+                { name: '載入班別', func: testGetClasses, resultId: 'classesResult' },
+                { name: '載入學員', func: testGetStudents, resultId: 'studentsResult' },
+                { name: '同步學員', func: testSyncStudents, resultId: 'syncStudentsResult' },
+                { name: '同步出席', func: testSyncAttendance, resultId: 'syncAttendanceResult' }
+            ];
+
+            const results = [];
+            
+            for (const test of tests) {
+                try {
+                    await test.func();
+                    await new Promise(resolve => setTimeout(resolve, 1000)); // 等待1秒
+                    
+                    const resultElement = document.getElementById(test.resultId);
+                    const isSuccess = resultElement.textContent.includes('✅');
+                    results.push({ name: test.name, success: isSuccess, message: resultElement.textContent });
+                } catch (error) {
+                    results.push({ name: test.name, success: false, message: error.message });
+                }
+            }
+
+            const successCount = results.filter(r => r.success).length;
+            const totalTests = results.length;
+            
+            let summary = `🎯 測試完成！成功 ${successCount}/${totalTests} 項\n\n`;
+            
+            results.forEach(result => {
+                summary += `${result.success ? '✅' : '❌'} ${result.name}\n`;
+            });
+            
+            if (successCount === totalTests) {
+                summary += '\n🎉 所有測試通過！你的 Google Apps Script 設定正確。';
+                showResult('overallResult', summary, 'success');
+            } else {
+                summary += '\n⚠️ 有測試失敗，請檢查設定並參考 Google_Apps_Script_修復指南.md';
+                showResult('overallResult', summary, 'error');
+            }
+        }
+
+        function clearAllResults() {
+            const resultIds = ['basicResult', 'classesResult', 'studentsResult', 'syncStudentsResult', 'syncAttendanceResult', 'overallResult'];
+            resultIds.forEach(id => {
+                document.getElementById(id).textContent = '';
+                document.getElementById(id).className = 'result';
+            });
+        }
+
+        // 頁面載入時自動載入設定
+        window.onload = function() {
+            loadConfig();
+        };
+    </script>
+</body>
+</html> 

@@ -1,4 +1,4 @@
-// Vercel Serverless Function - 同步學員到 Google Sheets
+// Vercel Serverless Function - 同步學員資料到 Google Sheets
 
 export default async function handler(req, res) {
     if (req.method !== 'POST') {
@@ -17,17 +17,16 @@ export default async function handler(req, res) {
             });
         }
 
-        // 取得請求資料
         const { students } = req.body;
-        
+
         if (!students || !Array.isArray(students)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid students data'
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Invalid request body. Expected students array.' 
             });
         }
 
-        // 呼叫 Google Apps Script
+        // 呼叫 Google Apps Script (添加 redirect: 'follow' 處理 302 重定向)
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
             headers: {
@@ -36,7 +35,8 @@ export default async function handler(req, res) {
             body: JSON.stringify({
                 action: 'syncStudents',
                 students: students
-            })
+            }),
+            redirect: 'follow'
         });
 
         if (!response.ok) {
@@ -44,13 +44,12 @@ export default async function handler(req, res) {
         }
 
         const data = await response.json();
-        
+
         if (data.success) {
             res.status(200).json({
                 success: true,
-                message: `成功同步 ${students.length} 筆學員資料到 Google Sheets`,
-                count: students.length,
-                timestamp: new Date().toISOString()
+                message: data.message || '學員資料同步成功',
+                count: data.count || students.length
             });
         } else {
             throw new Error(data.error || '同步失敗');

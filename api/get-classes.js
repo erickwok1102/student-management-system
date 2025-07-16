@@ -17,12 +17,13 @@ export default async function handler(req, res) {
             });
         }
 
-        // 呼叫 Google Apps Script
+        // 呼叫 Google Apps Script (添加 redirect: 'follow' 處理 302 重定向)
         const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getClasses`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            redirect: 'follow'
         });
 
         if (!response.ok) {

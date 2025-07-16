@@ -1,4 +1,4 @@
-// Vercel Serverless Function - 從 Google Sheets 讀取課堂資料
+// Vercel Serverless Function - 從 Google Sheets 讀取課程資料
 
 export default async function handler(req, res) {
     if (req.method !== 'GET') {
@@ -17,12 +17,13 @@ export default async function handler(req, res) {
             });
         }
 
-        // 呼叫 Google Apps Script
+        // 呼叫 Google Apps Script (添加 redirect: 'follow' 處理 302 重定向)
         const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getSchedule`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-            }
+            },
+            redirect: 'follow'
         });
 
         if (!response.ok) {
@@ -36,10 +37,10 @@ export default async function handler(req, res) {
                 success: true,
                 count: data.schedule ? data.schedule.length : 0,
                 schedule: data.schedule || [],
-                message: `成功載入 ${data.schedule ? data.schedule.length : 0} 堂課程`
+                message: `成功載入 ${data.schedule ? data.schedule.length : 0} 筆課程資料`
             });
         } else {
-            throw new Error(data.error || '載入課堂資料失敗');
+            throw new Error(data.error || '載入課程資料失敗');
         }
 
     } catch (error) {

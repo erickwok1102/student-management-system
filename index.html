@@ -154,6 +154,43 @@
         }
         .empty-state p { font-size: 16px; line-height: 1.6; }
         
+        /* 點名按鈕樣式 */
+        .attendance-btn {
+            transition: all 0.3s ease !important;
+            border: 2px solid transparent !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        }
+        
+        .attendance-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+        }
+        
+        .attendance-btn:active {
+            transform: translateY(0) !important;
+        }
+        
+        .attendance-btn.active {
+            border: 2px solid #fff !important;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25) !important;
+        }
+        
+        .btn-success.active {
+            background-color: #198754 !important;
+            transform: scale(0.95) !important;
+        }
+        
+        .btn-warning.active {
+            background-color: #ffc107 !important;
+            transform: scale(0.95) !important;
+        }
+        
+        .btn-primary.active {
+            background-color: #0d6efd !important;
+            transform: scale(0.95) !important;
+        }
+
         /* 響應式設計 */
         @media (max-width: 768px) {
             .container { padding: 15px; }
@@ -164,6 +201,7 @@
             .sync-grid { grid-template-columns: 1fr; }
             .tabs { flex-wrap: wrap; }
             .tab { padding: 15px 20px; }
+            .attendance-btn { padding: 8px 16px !important; font-size: 14px !important; }
         }
     </style>
 </head>
@@ -381,6 +419,9 @@
             
             // 設定預設日期為今天
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+            
+            // 設置點名按鈕事件監聽器
+            setupAttendanceButtons();
             
             loadTodayAttendance();
         });
@@ -601,18 +642,38 @@
                     body: JSON.stringify({ students })
                 });
 
-                const result = await response.json();
+                // 檢查回應是否為有效的 JSON
+                let result;
+                const responseText = await response.text();
+                
+                try {
+                    result = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('JSON 解析錯誤:', jsonError);
+                    console.error('原始回應:', responseText);
+                    throw new Error(`Google Apps Script 返回無效的 JSON 格式。請檢查 Google Apps Script 設定。原始錯誤: ${jsonError.message}`);
+                }
                 
                 if (result.success) {
                     showNotification(`✅ ${result.message}`, 'success');
                     document.getElementById('syncStatus').textContent = `✅ ${result.message} (${new Date().toLocaleString('zh-TW')})`;
                 } else {
-                    throw new Error(result.error);
+                    throw new Error(result.error || result.message || '未知錯誤');
                 }
             } catch (error) {
                 console.error('同步失敗:', error);
-                showNotification('❌ 同步失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = `❌ 同步失敗: ${error.message}`;
+                
+                let errorMessage = error.message;
+                if (error.message.includes('JSON')) {
+                    errorMessage = '❌ Google Apps Script 設定錯誤，請檢查設定指南';
+                } else if (error.message.includes('Missing Google Apps Script URL')) {
+                    errorMessage = '❌ 請先設定 Google Apps Script URL 環境變數';
+                } else if (error.message.includes('Failed to fetch')) {
+                    errorMessage = '❌ 無法連接到 Google Apps Script，請檢查 URL 是否正確';
+                }
+                
+                showNotification(errorMessage, 'error');
+                document.getElementById('syncStatus').textContent = errorMessage;
             }
         }
 
@@ -730,14 +791,14 @@
                     showNotification('⚠️ 請先設定 Google Apps Script URL', 'warning');
                     document.getElementById('syncStatus').textContent = '⚠️ 請先設定 Google Apps Script URL';
                 } else if (result.error === 'Invalid action') {
-                    showNotification('⚠️ 請更新 Google Apps Script 代碼', 'warning');
+                    showNotification('⚠️ 請更新 Google Apps Script 代碼以支援班別載入功能', 'warning');
                     document.getElementById('syncStatus').textContent = '⚠️ 請更新 Google Apps Script 代碼以支援 getClasses 功能';
                 } else {
                     throw new Error(result.error || '載入班別失敗');
                 }
             } catch (error) {
                 console.error('載入班別失敗:', error);
-                showNotification('❌ 載入班別失敗: ' + error.message, 'error');
+                showNotification('❌ 載入班別失敗，請檢查 Google Apps Script 設定', 'error');
                 document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
             }
         }
@@ -766,6 +827,8 @@
                 }
             });
         }
+
+
 
         // 載入課堂資料
         async function loadSchedule() {
@@ -921,6 +984,9 @@
             displayAttendanceList(classStudents);
             document.getElementById('attendanceListCard').style.display = 'block';
             
+            // 設置點名按鈕事件監聽器
+            setupAttendanceButtons();
+            
             showNotification(`開始 ${className} 的點名`, 'success');
         }
         
@@ -936,21 +1002,17 @@
                             ${student.nickname ? `<span style="color: #666; font-size: 14px;">(${student.nickname})</span>` : ''}
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-success" onclick="markAttendance('${student.id}', '出席')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-success attendance-btn" data-student-id="${student.id}" data-status="出席" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             ✅ 出席
                         </button>
-                        <button class="btn btn-danger" onclick="markAttendance('${student.id}', '缺席')" 
-                                style="padding: 8px 15px; font-size: 14px;">
-                            ❌ 缺席
-                        </button>
-                        <button class="btn btn-warning" onclick="markAttendance('${student.id}', '請假')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                        <button class="btn btn-warning attendance-btn" data-student-id="${student.id}" data-status="請假" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             🏥 請假
                         </button>
-                        <button class="btn btn-primary" onclick="markAttendance('${student.id}', '遲到')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                        <button class="btn btn-primary attendance-btn" data-student-id="${student.id}" data-status="遲到" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             ⏰ 遲到
                         </button>
                         </div>
@@ -960,8 +1022,12 @@
         
         // 標記出席狀態
         function markAttendance(studentId, status) {
+            console.log('markAttendance 被呼叫:', studentId, status); // 除錯用
             const student = students.find(s => s.id === studentId);
-            if (!student) return;
+            if (!student) {
+                console.error('找不到學員:', studentId);
+                return;
+            }
             
             // 移除該學員的舊記錄
             todayAttendance = todayAttendance.filter(att => 
@@ -979,29 +1045,111 @@
                 createdAt: new Date().toLocaleString('zh-TW')
             });
             
-            // 更新按鈕狀態
-            const studentItem = document.querySelector(`button[onclick="markAttendance('${studentId}', '${status}')"]`).closest('.student-item');
-            const buttons = studentItem.querySelectorAll('button');
-            buttons.forEach(btn => btn.classList.remove('active'));
+            // 更新按鈕狀態 - 使用新的 data 屬性
+            const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
+            studentButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.opacity = '1';
+                btn.style.transform = 'scale(1)';
+                btn.style.border = '2px solid transparent';
+            });
             
-            const clickedButton = document.querySelector(`button[onclick="markAttendance('${studentId}', '${status}')"]`);
-            clickedButton.classList.add('active');
-            clickedButton.style.opacity = '0.7';
+            const clickedButton = document.querySelector(`button[data-student-id="${studentId}"][data-status="${status}"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+                clickedButton.style.opacity = '0.9';
+                clickedButton.style.transform = 'scale(0.95)';
+                clickedButton.style.border = '2px solid #fff';
+                clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
+                console.log('按鈕樣式已更新:', clickedButton); // 除錯用
+            } else {
+                console.error('找不到點擊的按鈕:', studentId, status); // 除錯用
+            }
             
             showNotification(`${student.name} 標記為 ${status}`, 'success');
         }
+
+        // 設置點名按鈕事件監聽器
+        function setupAttendanceButtons() {
+            // 移除舊的事件監聽器
+            document.removeEventListener('click', attendanceClickHandler);
+            // 添加新的事件監聽器
+            document.addEventListener('click', attendanceClickHandler);
+        }
+
+        // 點名按鈕點擊處理器
+        function attendanceClickHandler(event) {
+            if (event.target.classList.contains('attendance-btn')) {
+                event.preventDefault();
+                event.stopPropagation();
+                const studentId = event.target.getAttribute('data-student-id');
+                const status = event.target.getAttribute('data-status');
+                if (studentId && status) {
+                    console.log('點名按鈕被點擊:', studentId, status); // 除錯用
+                    markAttendance(studentId, status);
+                }
+            }
+        }
         
         // 儲存點名記錄
-        function saveAttendance() {
+        async function saveAttendance() {
             if (todayAttendance.length === 0) {
                 showNotification('沒有點名記錄可儲存', 'warning');
                 return;
             }
             
+            // 儲存到本地
             localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
             displayTodayAttendance();
             
-            showNotification(`✅ 已儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
+            // 同步到 Google Sheets
+            try {
+                showNotification('正在同步點名記錄到 Google Sheets...', 'warning');
+                
+                // 準備同步資料
+                const attendanceForSync = todayAttendance.map(record => {
+                    const student = students.find(s => s.id === record.studentId);
+                    return {
+                        date: record.date,
+                        class: record.className,
+                        studentId: record.studentId,
+                        studentName: student ? student.name : record.studentId,
+                        status: record.status
+                    };
+                });
+                
+                const response = await fetch(window.location.origin + '/api/sync-attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attendance: attendanceForSync
+                    })
+                });
+                
+                // 檢查回應是否為有效的 JSON
+                let result;
+                const responseText = await response.text();
+                
+                try {
+                    result = JSON.parse(responseText);
+                } catch (jsonError) {
+                    console.error('JSON 解析錯誤:', jsonError);
+                    console.error('原始回應:', responseText);
+                    throw new Error(`Google Apps Script 返回無效的 JSON 格式。請檢查 Google Apps Script 設定。`);
+                }
+                
+                if (result.success) {
+                    showNotification(`✅ 已儲存並同步 ${todayAttendance.length} 筆點名記錄到 Google Sheets`, 'success');
+                } else {
+                    throw new Error(result.error || result.message || '同步失敗');
+                }
+                
+            } catch (error) {
+                console.error('同步點名記錄失敗:', error);
+                showNotification(`⚠️ 本地儲存成功，但同步到 Google Sheets 失敗: ${error.message}`, 'warning');
+            }
             
             // 隱藏點名列表
             document.getElementById('attendanceListCard').style.display = 'none';

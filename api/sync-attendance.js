@@ -1,7 +1,7 @@
-// Vercel Serverless Function - 從 Google Sheets 讀取學員資料
+// Vercel Serverless Function - 同步出席記錄到 Google Sheets
 
 export default async function handler(req, res) {
-    if (req.method !== 'GET') {
+    if (req.method !== 'POST') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
@@ -17,12 +17,25 @@ export default async function handler(req, res) {
             });
         }
 
+        const { attendance } = req.body;
+
+        if (!attendance || !Array.isArray(attendance)) {
+            return res.status(400).json({ 
+                success: false, 
+                error: 'Invalid request body. Expected attendance array.' 
+            });
+        }
+
         // 呼叫 Google Apps Script (添加 redirect: 'follow' 處理 302 重定向)
-        const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getStudents`, {
-            method: 'GET',
+        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
+            body: JSON.stringify({
+                action: 'syncAttendance',
+                attendance: attendance
+            }),
             redirect: 'follow'
         });
 
@@ -31,20 +44,19 @@ export default async function handler(req, res) {
         }
 
         const data = await response.json();
-        
+
         if (data.success) {
             res.status(200).json({
                 success: true,
-                count: data.students ? data.students.length : 0,
-                students: data.students || [],
-                message: `成功載入 ${data.students ? data.students.length : 0} 筆學員資料`
+                message: data.message || '出席記錄同步成功',
+                count: data.count || attendance.length
             });
         } else {
-            throw new Error(data.error || '載入學員資料失敗');
+            throw new Error(data.error || '同步出席記錄失敗');
         }
 
     } catch (error) {
-        console.error('Get students error:', error);
+        console.error('Sync attendance error:', error);
         res.status(500).json({
             success: false,
             error: error.message,
