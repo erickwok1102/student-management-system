@@ -994,16 +994,54 @@
         }
         
         // 儲存點名記錄
-        function saveAttendance() {
+        async function saveAttendance() {
             if (todayAttendance.length === 0) {
                 showNotification('沒有點名記錄可儲存', 'warning');
                 return;
             }
             
+            // 儲存到本地
             localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
             displayTodayAttendance();
             
-            showNotification(`✅ 已儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
+            // 同步到 Google Sheets
+            try {
+                showNotification('正在同步點名記錄到 Google Sheets...', 'warning');
+                
+                // 準備同步資料
+                const attendanceForSync = todayAttendance.map(record => {
+                    const student = currentStudents.find(s => s.id === record.studentId);
+                    return {
+                        date: record.date,
+                        class: record.className,
+                        studentId: record.studentId,
+                        studentName: student ? student.name : record.studentId,
+                        status: record.status
+                    };
+                });
+                
+                const response = await fetch(window.location.origin + '/api/sync-attendance', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        attendance: attendanceForSync
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ 已儲存並同步 ${todayAttendance.length} 筆點名記錄到 Google Sheets`, 'success');
+                } else {
+                    throw new Error(result.error || '同步失敗');
+                }
+                
+            } catch (error) {
+                console.error('同步點名記錄失敗:', error);
+                showNotification(`⚠️ 本地儲存成功，但同步到 Google Sheets 失敗: ${error.message}`, 'warning');
+            }
             
             // 隱藏點名列表
             document.getElementById('attendanceListCard').style.display = 'none';
