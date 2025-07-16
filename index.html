@@ -154,6 +154,43 @@
         }
         .empty-state p { font-size: 16px; line-height: 1.6; }
         
+        /* 點名按鈕樣式 */
+        .attendance-btn {
+            transition: all 0.3s ease !important;
+            border: 2px solid transparent !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        }
+        
+        .attendance-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+        }
+        
+        .attendance-btn:active {
+            transform: translateY(0) !important;
+        }
+        
+        .attendance-btn.active {
+            border: 2px solid #fff !important;
+            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25) !important;
+        }
+        
+        .btn-success.active {
+            background-color: #198754 !important;
+            transform: scale(0.95) !important;
+        }
+        
+        .btn-warning.active {
+            background-color: #ffc107 !important;
+            transform: scale(0.95) !important;
+        }
+        
+        .btn-primary.active {
+            background-color: #0d6efd !important;
+            transform: scale(0.95) !important;
+        }
+
         /* 響應式設計 */
         @media (max-width: 768px) {
             .container { padding: 15px; }
@@ -164,6 +201,7 @@
             .sync-grid { grid-template-columns: 1fr; }
             .tabs { flex-wrap: wrap; }
             .tab { padding: 15px 20px; }
+            .attendance-btn { padding: 8px 16px !important; font-size: 14px !important; }
         }
     </style>
 </head>
@@ -923,6 +961,9 @@
             displayAttendanceList(classStudents);
             document.getElementById('attendanceListCard').style.display = 'block';
             
+            // 設置點名按鈕事件監聽器
+            setupAttendanceButtons();
+            
             showNotification(`開始 ${className} 的點名`, 'success');
         }
         
@@ -938,21 +979,17 @@
                             ${student.nickname ? `<span style="color: #666; font-size: 14px;">(${student.nickname})</span>` : ''}
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px;">
-                        <button class="btn btn-success" onclick="markAttendance('${student.id}', '出席')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn btn-success attendance-btn" data-student-id="${student.id}" data-status="出席" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             ✅ 出席
                         </button>
-                        <button class="btn btn-danger" onclick="markAttendance('${student.id}', '缺席')" 
-                                style="padding: 8px 15px; font-size: 14px;">
-                            ❌ 缺席
-                        </button>
-                        <button class="btn btn-warning" onclick="markAttendance('${student.id}', '請假')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                        <button class="btn btn-warning attendance-btn" data-student-id="${student.id}" data-status="請假" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             🏥 請假
                         </button>
-                        <button class="btn btn-primary" onclick="markAttendance('${student.id}', '遲到')" 
-                                style="padding: 8px 15px; font-size: 14px;">
+                        <button class="btn btn-primary attendance-btn" data-student-id="${student.id}" data-status="遲到" 
+                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             ⏰ 遲到
                         </button>
                         </div>
@@ -981,16 +1018,36 @@
                 createdAt: new Date().toLocaleString('zh-TW')
             });
             
-            // 更新按鈕狀態
-            const studentItem = document.querySelector(`button[onclick="markAttendance('${studentId}', '${status}')"]`).closest('.student-item');
-            const buttons = studentItem.querySelectorAll('button');
-            buttons.forEach(btn => btn.classList.remove('active'));
+            // 更新按鈕狀態 - 使用新的 data 屬性
+            const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
+            studentButtons.forEach(btn => {
+                btn.classList.remove('active');
+                btn.style.opacity = '1';
+                btn.style.transform = 'scale(1)';
+            });
             
-            const clickedButton = document.querySelector(`button[onclick="markAttendance('${studentId}', '${status}')"]`);
-            clickedButton.classList.add('active');
-            clickedButton.style.opacity = '0.7';
+            const clickedButton = document.querySelector(`button[data-student-id="${studentId}"][data-status="${status}"]`);
+            if (clickedButton) {
+                clickedButton.classList.add('active');
+                clickedButton.style.opacity = '0.8';
+                clickedButton.style.transform = 'scale(0.95)';
+            }
             
             showNotification(`${student.name} 標記為 ${status}`, 'success');
+        }
+
+        // 設置點名按鈕事件監聽器
+        function setupAttendanceButtons() {
+            document.addEventListener('click', function(event) {
+                if (event.target.classList.contains('attendance-btn')) {
+                    event.preventDefault();
+                    const studentId = event.target.getAttribute('data-student-id');
+                    const status = event.target.getAttribute('data-status');
+                    if (studentId && status) {
+                        markAttendance(studentId, status);
+                    }
+                }
+            });
         }
         
         // 儲存點名記錄
