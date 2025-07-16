@@ -420,6 +420,9 @@
             // 設定預設日期為今天
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
             
+            // 設置點名按鈕事件監聽器
+            setupAttendanceButtons();
+            
             loadTodayAttendance();
         });
 
@@ -999,8 +1002,12 @@
         
         // 標記出席狀態
         function markAttendance(studentId, status) {
+            console.log('markAttendance 被呼叫:', studentId, status); // 除錯用
             const student = students.find(s => s.id === studentId);
-            if (!student) return;
+            if (!student) {
+                console.error('找不到學員:', studentId);
+                return;
+            }
             
             // 移除該學員的舊記錄
             todayAttendance = todayAttendance.filter(att => 
@@ -1024,13 +1031,19 @@
                 btn.classList.remove('active');
                 btn.style.opacity = '1';
                 btn.style.transform = 'scale(1)';
+                btn.style.border = '2px solid transparent';
             });
             
             const clickedButton = document.querySelector(`button[data-student-id="${studentId}"][data-status="${status}"]`);
             if (clickedButton) {
                 clickedButton.classList.add('active');
-                clickedButton.style.opacity = '0.8';
+                clickedButton.style.opacity = '0.9';
                 clickedButton.style.transform = 'scale(0.95)';
+                clickedButton.style.border = '2px solid #fff';
+                clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
+                console.log('按鈕樣式已更新:', clickedButton); // 除錯用
+            } else {
+                console.error('找不到點擊的按鈕:', studentId, status); // 除錯用
             }
             
             showNotification(`${student.name} 標記為 ${status}`, 'success');
@@ -1038,16 +1051,24 @@
 
         // 設置點名按鈕事件監聽器
         function setupAttendanceButtons() {
-            document.addEventListener('click', function(event) {
-                if (event.target.classList.contains('attendance-btn')) {
-                    event.preventDefault();
-                    const studentId = event.target.getAttribute('data-student-id');
-                    const status = event.target.getAttribute('data-status');
-                    if (studentId && status) {
-                        markAttendance(studentId, status);
-                    }
+            // 移除舊的事件監聽器
+            document.removeEventListener('click', attendanceClickHandler);
+            // 添加新的事件監聽器
+            document.addEventListener('click', attendanceClickHandler);
+        }
+
+        // 點名按鈕點擊處理器
+        function attendanceClickHandler(event) {
+            if (event.target.classList.contains('attendance-btn')) {
+                event.preventDefault();
+                event.stopPropagation();
+                const studentId = event.target.getAttribute('data-student-id');
+                const status = event.target.getAttribute('data-status');
+                if (studentId && status) {
+                    console.log('點名按鈕被點擊:', studentId, status); // 除錯用
+                    markAttendance(studentId, status);
                 }
-            });
+            }
         }
         
         // 儲存點名記錄
@@ -1067,7 +1088,7 @@
                 
                 // 準備同步資料
                 const attendanceForSync = todayAttendance.map(record => {
-                    const student = currentStudents.find(s => s.id === record.studentId);
+                    const student = students.find(s => s.id === record.studentId);
                     return {
                         date: record.date,
                         class: record.className,
