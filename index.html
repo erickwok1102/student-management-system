@@ -730,15 +730,17 @@
                     showNotification('⚠️ 請先設定 Google Apps Script URL', 'warning');
                     document.getElementById('syncStatus').textContent = '⚠️ 請先設定 Google Apps Script URL';
                 } else if (result.error === 'Invalid action') {
-                    showNotification('⚠️ 請更新 Google Apps Script 代碼', 'warning');
+                    showNotification('⚠️ Google Apps Script 未支援班別載入，使用預設選項', 'warning');
                     document.getElementById('syncStatus').textContent = '⚠️ 請更新 Google Apps Script 代碼以支援 getClasses 功能';
+                    loadFallbackClasses(); // 使用預設班別
                 } else {
                     throw new Error(result.error || '載入班別失敗');
                 }
             } catch (error) {
                 console.error('載入班別失敗:', error);
-                showNotification('❌ 載入班別失敗: ' + error.message, 'error');
+                showNotification('❌ 載入班別失敗，使用預設選項', 'warning');
                 document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
+                loadFallbackClasses(); // 使用預設班別
             }
         }
 
@@ -765,6 +767,13 @@
                     });
                 }
             });
+        }
+
+        // Fallback 班別選項（當 Google Apps Script 未設定時使用）
+        function loadFallbackClasses() {
+            const fallbackClasses = ['青年班', '兒童班', '數學班', '英文班', '中文班', '科學班', '音樂班', '美術班', '體育班'];
+            updateClassOptions(fallbackClasses);
+            showNotification('📝 使用預設班別選項，請設定 Google Apps Script 以載入自訂班別', 'warning');
         }
 
         // 載入課堂資料
