@@ -177,14 +177,14 @@
                 <span class="status-indicator status-offline" id="serverStatus"></span>
                 <span id="statusText" style="font-weight: 600;">檢測中...</span>
             </div>
-        </div>
+                </div>
 
         <!-- 標籤頁導航 -->
         <div class="tabs">
             <button class="tab active" onclick="showTab('students', this)">👥 新增學員</button>
             <button class="tab" onclick="showTab('attendance', this)">✅ 點名系統</button>
             <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
-        </div>
+                </div>
 
         <!-- 學員管理標籤 -->
         <div id="studentsTab" class="tab-content active">
@@ -194,11 +194,11 @@
                     <div class="form-group">
                         <label>學員姓名 *</label>
                         <input type="text" id="studentName" placeholder="請輸入學員姓名" required>
-                    </div>
+                </div>
                     <div class="form-group">
                         <label>別名/英文名</label>
                         <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
-                    </div>
+                </div>
                     <div class="form-group">
                         <label>班別</label>
                         <select id="studentClass">
@@ -209,7 +209,7 @@
                     <div class="form-group">
                         <label>聯絡電話</label>
                         <input type="tel" id="studentPhone" placeholder="聯絡電話">
-                    </div>
+                        </div>
                     <div class="form-group">
                         <label>電子信箱</label>
                         <input type="email" id="studentEmail" placeholder="電子信箱">
@@ -233,7 +233,7 @@
                     <button class="btn btn-primary" onclick="loadStudents()">🔄 重新載入</button>
                     <button class="btn btn-warning" onclick="clearForm()">🧹 清空表單</button>
                 </div>
-            </div>
+                </div>
 
             <div class="card">
                 <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
@@ -259,23 +259,15 @@
                         <label>班別 *</label>
                         <select id="attendanceClass" required onchange="loadStudentsForAttendance()">
                             <option value="">請選擇班別</option>
-                            <option value="青年班">青年班</option>
-                            <option value="兒童班">兒童班</option>
-                            <option value="數學班">數學班</option>
-                            <option value="英文班">英文班</option>
-                            <option value="中文班">中文班</option>
-                            <option value="科學班">科學班</option>
-                            <option value="音樂班">音樂班</option>
-                            <option value="美術班">美術班</option>
-                            <option value="體育班">體育班</option>
+                            <!-- 班別選項將從 Google Sheets 動態載入 -->
                         </select>
                     </div>
                 </div>
-                
+
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
                 </div>
-            </div>
+                </div>
 
             <!-- 點名列表 -->
             <div class="card" id="attendanceListCard" style="display: none;">
@@ -297,7 +289,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+                </div>
 
         <!-- 雲端同步標籤 -->
         <div id="syncTab" class="tab-content">
@@ -325,7 +317,7 @@
                         </p>
                     </div>
                 </div>
-                
+
                 <div style="margin-top: 40px; padding: 25px; background: rgba(248,249,250,0.8); border-radius: 15px;">
                     <h4 style="color: #333; margin-bottom: 15px; font-size: 18px;">📋 同步狀態</h4>
                     <p id="syncStatus" style="color: #666; font-size: 16px;">尚未進行同步操作</p>
@@ -365,8 +357,8 @@
                     <button class="btn btn-success" onclick="exportStudentList()">📄 匯出學員清單</button>
                 </div>
             </div>
-        </div>
-    </div>
+                        </div>
+                        </div>
 
     <!-- 通知元素 -->
     <div id="notification" class="notification"></div>
@@ -384,6 +376,7 @@
             showNotification('歡迎使用學員管理系統！', 'success');
             await checkServerStatus();
             await loadStudents();
+            await loadClasses(); // 載入班別選項
             await loadFromCloudSilently();
             
             // 設定預設日期為今天
@@ -530,7 +523,7 @@
                         <h3>📚 還沒有學員資料</h3>
                         <p>點擊上方的「新增學員」按鈕開始建立你的學員名冊<br>
                         所有資料會安全地儲存在你的瀏覽器中</p>
-                    </div>
+                        </div>
                 `;
                 return;
             }
@@ -555,13 +548,13 @@
                             ${student.phone ? ` | 📞 ${student.phone}` : ''}
                             ${student.email ? ` | 📧 ${student.email}` : ''}
                         </div>
-                    </div>
+                        </div>
                     <div>
                         <button class="btn btn-danger" onclick="deleteStudent('${student.id}')" 
                                 title="刪除學員" style="padding: 10px 15px;">
                             🗑️
                         </button>
-                    </div>
+                </div>
                 </div>
             `).join('');
         }
@@ -840,7 +833,7 @@
                     <div class="empty-state">
                         <h3>📚 還沒有班組資料</h3>
                         <p>點擊上方的「新增班組」按鈕開始建立你的班組資料</p>
-                    </div>
+                </div>
                 `;
                 return;
             }
@@ -960,7 +953,7 @@
                                 style="padding: 8px 15px; font-size: 14px;">
                             ⏰ 遲到
                         </button>
-                    </div>
+                        </div>
                 </div>
             `).join('');
         }
@@ -1076,20 +1069,20 @@
                                         <span style="color: ${getAttendanceColor(att.status)}; font-weight: 600; margin-left: 10px;">
                                             ${getAttendanceIcon(att.status)} ${att.status}
                                         </span>
-                                    </div>
+                </div>
                                     <div style="color: #999; font-size: 13px;">
                                         📝 ${att.createdAt}
-                                    </div>
-                                </div>
+            </div>
+        </div>
                                 <div>
                                     <button class="btn btn-danger" onclick="deleteAttendance('${att.id}')" 
                                             title="刪除記錄" style="padding: 8px 12px; font-size: 12px;">
                                         🗑️
                                     </button>
-                                </div>
-                            </div>
+            </div>
+        </div>
                         `).join('')}
-                    </div>
+    </div>
                 `;
             });
             
