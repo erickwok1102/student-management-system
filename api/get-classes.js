@@ -1,7 +1,7 @@
-// Vercel Serverless Function - 同步學員到 Google Sheets
+// Vercel Serverless Function - 從 Google Sheets 讀取班別資料
 
 export default async function handler(req, res) {
-    if (req.method !== 'POST') {
+    if (req.method !== 'GET') {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
@@ -17,26 +17,12 @@ export default async function handler(req, res) {
             });
         }
 
-        // 取得請求資料
-        const { students } = req.body;
-        
-        if (!students || !Array.isArray(students)) {
-            return res.status(400).json({
-                success: false,
-                error: 'Invalid students data'
-            });
-        }
-
         // 呼叫 Google Apps Script
-        const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
-            method: 'POST',
+        const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getClasses`, {
+            method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                action: 'syncStudents',
-                students: students
-            })
+            }
         });
 
         if (!response.ok) {
@@ -48,16 +34,16 @@ export default async function handler(req, res) {
         if (data.success) {
             res.status(200).json({
                 success: true,
-                message: `成功同步 ${students.length} 筆學員資料到 Google Sheets`,
-                count: students.length,
-                timestamp: new Date().toISOString()
+                count: data.classes ? data.classes.length : 0,
+                classes: data.classes || [],
+                message: `成功載入 ${data.classes ? data.classes.length : 0} 個班別`
             });
         } else {
-            throw new Error(data.error || '同步失敗');
+            throw new Error(data.error || '載入班別失敗');
         }
 
     } catch (error) {
-        console.error('Sync students error:', error);
+        console.error('Get classes error:', error);
         res.status(500).json({
             success: false,
             error: error.message,

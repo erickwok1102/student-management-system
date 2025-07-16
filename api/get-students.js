@@ -1,73 +1,53 @@
 // Vercel Serverless Function - 從 Google Sheets 讀取學員資料
-const { GoogleSpreadsheet } = require('google-spreadsheet');
 
 export default async function handler(req, res) {
-  // 設定 CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-  if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  try {
-    // 連接 Google Sheets
-    const doc = new GoogleSpreadsheet(process.env.GOOGLE_SHEET_ID);
-    
-    await doc.useServiceAccountAuth({
-      client_email: process.env.GOOGLE_CLIENT_EMAIL,
-      private_key: process.env.GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n')
-    });
-
-    await doc.loadInfo();
-    
-    // 取得學員資料工作表
-    const sheet = doc.sheetsByTitle['學員資料'];
-    if (!sheet) {
-      return res.status(200).json({
-        success: true,
-        students: [],
-        message: '學員資料工作表不存在'
-      });
+    if (req.method !== 'GET') {
+        return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    // 讀取所有行
-    const rows = await sheet.getRows();
-    
-    // 轉換為前端格式
-    const students = rows.map(row => ({
-      id: row.get('ID') || '',
-      name: row.get('姓名') || '',
-      nickname: row.get('別名') || '',
-      class: row.get('班別') || '',
-      birthDate: row.get('出生日期') || '',
-      phone: row.get('電話') || '',
-      email: row.get('Email') || '',
-      remarks: row.get('備註') || '',
-      status: row.get('狀態') || '在讀',
-      createdAt: row.get('創建日期') || '',
-      emergencyContactName: row.get('緊急聯絡人') || '',
-      emergencyContactPhone: row.get('緊急聯絡電話') || ''
-    }));
+    try {
+        // 檢查環境變數
+        const { GOOGLE_APPS_SCRIPT_URL } = process.env;
+        
+        if (!GOOGLE_APPS_SCRIPT_URL) {
+            return res.status(500).json({ 
+                success: false, 
+                error: 'Missing Google Apps Script URL configuration',
+                message: '請先設定 Google Apps Script Web App URL'
+            });
+        }
 
-    res.status(200).json({
-      success: true,
-      students: students,
-      count: students.length,
-      timestamp: new Date().toISOString()
-    });
+        // 呼叫 Google Apps Script
+        const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getStudents`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
 
-  } catch (error) {
-    console.error('讀取失敗:', error);
-    res.status(500).json({
-      success: false,
-      error: '讀取失敗: ' + error.message,
-      students: []
-    });
-  }
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.success) {
+            res.status(200).json({
+                success: true,
+                count: data.students ? data.students.length : 0,
+                students: data.students || [],
+                message: `成功載入 ${data.students ? data.students.length : 0} 筆學員資料`
+            });
+        } else {
+            throw new Error(data.error || '載入失敗');
+        }
+
+    } catch (error) {
+        console.error('Get students error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message,
+            details: error.toString()
+        });
+    }
 } 
