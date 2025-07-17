@@ -636,10 +636,17 @@
                 showNotification('正在同步到雲端...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
                 
-                const response = await fetch(window.location.origin + '/api/sync-students', {
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ students })
+                    body: JSON.stringify({ 
+                        action: 'syncStudents',
+                        students: students 
+                    }),
+                    redirect: 'follow'
                 });
 
                 // 檢查回應是否為有效的 JSON
@@ -681,10 +688,17 @@
         async function syncToCloudSilently() {
             if (students.length === 0) return;
             try {
-                await fetch(window.location.origin + '/api/sync-students', {
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                
+                await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ students })
+                    body: JSON.stringify({ 
+                        action: 'syncStudents',
+                        students: students 
+                    }),
+                    redirect: 'follow'
                 });
                 console.log(`🔄 自動同步 ${students.length} 筆學員資料到雲端`);
             } catch (error) {
@@ -780,7 +794,13 @@
                 showNotification('正在載入班別資料...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
                 
-                const response = await fetch(window.location.origin + '/api/get-classes');
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                
+                const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getClasses`, {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
                 const result = await response.json();
                 
                 if (result.success && result.classes) {
@@ -806,7 +826,7 @@
 
 
         // 更新班別選項
-        function updateClassOptions(classNames) {
+        function updateClassOptions(classData) {
             const selects = [
                 document.getElementById('studentClass'),
                 document.getElementById('attendanceClass')
@@ -816,8 +836,22 @@
                 if (select) {
                     select.innerHTML = '<option value="">請選擇班別</option>';
                     
+                    // 處理不同的資料格式
+                    let classNames = [];
+                    
+                    if (Array.isArray(classData)) {
+                        classNames = classData.map(item => {
+                            // 如果是對象，提取 class_id 或 名稱 欄位
+                            if (typeof item === 'object' && item !== null) {
+                                return item.class_id || item['名稱'] || item.name || item.className || '';
+                            }
+                            // 如果是字符串，直接使用
+                            return item || '';
+                        });
+                    }
+                    
                     classNames.forEach(className => {
-                        if (className && className.trim()) {
+                        if (className && typeof className === 'string' && className.trim()) {
                             const option = document.createElement('option');
                             option.value = className.trim();
                             option.textContent = className.trim();
@@ -1118,14 +1152,19 @@
                     };
                 });
                 
-                const response = await fetch(window.location.origin + '/api/sync-attendance', {
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
+                        action: 'syncAttendance',
                         attendance: attendanceForSync
-                    })
+                    }),
+                    redirect: 'follow'
                 });
                 
                 // 檢查回應是否為有效的 JSON
