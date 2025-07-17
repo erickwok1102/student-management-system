@@ -1,0 +1,128 @@
+<!-- 這是針對 Vercel 版本的修復方案 -->
+<!-- 需要修復的問題：className.trim is not a function -->
+
+<script>
+// 修復 updateClassOptions 函數，適配 Vercel API 返回的資料格式
+function updateClassOptions(classData) {
+    const selects = [
+        document.getElementById('studentClass'),
+        document.getElementById('attendanceClass')
+    ];
+    
+    selects.forEach(select => {
+        if (select) {
+            select.innerHTML = '<option value="">請選擇班別</option>';
+            
+            // 處理不同的資料格式
+            let classNames = [];
+            
+            // 如果 classData 是陣列
+            if (Array.isArray(classData)) {
+                classNames = classData.map(item => {
+                    // 處理對象格式 (Google Apps Script 返回)
+                    if (typeof item === 'object' && item !== null) {
+                        return item.class_id || item['名稱'] || item.name || item.className || '';
+                    }
+                    // 處理字符串格式 (可能的其他 API 返回)
+                    return item || '';
+                });
+            }
+            // 如果 classData 本身就是字符串陣列 (舊版本 API)
+            else if (classData && typeof classData === 'object') {
+                // 可能是 {classes: [...]} 格式
+                if (classData.classes && Array.isArray(classData.classes)) {
+                    classNames = classData.classes.map(item => {
+                        if (typeof item === 'object' && item !== null) {
+                            return item.class_id || item['名稱'] || item.name || item.className || '';
+                        }
+                        return item || '';
+                    });
+                }
+            }
+            
+            // 確保 classNames 是字符串陣列，並更新選項
+            classNames.forEach(className => {
+                if (className && typeof className === 'string' && className.trim()) {
+                    const option = document.createElement('option');
+                    option.value = className.trim();
+                    option.textContent = className.trim();
+                    select.appendChild(option);
+                }
+            });
+        }
+    });
+}
+
+// 修復版的載入班別函數，適配 Vercel API
+async function loadClasses() {
+    try {
+        showNotification('正在載入班別資料...', 'warning');
+        document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
+        
+        // 使用 Vercel API 路由
+        const response = await fetch(window.location.origin + '/api/get-classes');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const result = await response.json();
+        
+        console.log('API 返回的班別資料:', result); // 調試用
+        
+        if (result.success && result.classes) {
+            // 直接傳遞 result.classes 給 updateClassOptions
+            updateClassOptions(result.classes);
+            showNotification(`✅ 成功載入 ${result.count} 個班別`, 'success');
+            document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 個班別 (${new Date().toLocaleString('zh-TW')})`;
+        } else if (result.error === 'Missing Google Apps Script URL configuration') {
+            showNotification('⚠️ 請先設定 Google Apps Script URL', 'warning');
+            document.getElementById('syncStatus').textContent = '⚠️ 請先設定 Google Apps Script URL';
+        } else if (result.error === 'Invalid action') {
+            showNotification('⚠️ 請更新 Google Apps Script 代碼以支援班別載入功能', 'warning');
+            document.getElementById('syncStatus').textContent = '⚠️ 請更新 Google Apps Script 代碼以支援 getClasses 功能';
+        } else {
+            throw new Error(result.error || '載入班別失敗');
+        }
+    } catch (error) {
+        console.error('載入班別失敗:', error);
+        showNotification('❌ 載入班別失敗，請檢查 Google Apps Script 設定', 'error');
+        document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
+    }
+}
+
+// 測試資料格式的函數
+function debugClassData(data) {
+    console.log('=== 班別資料格式調試 ===');
+    console.log('原始資料:', data);
+    console.log('資料類型:', typeof data);
+    console.log('是否為陣列:', Array.isArray(data));
+    
+    if (Array.isArray(data)) {
+        console.log('陣列長度:', data.length);
+        if (data.length > 0) {
+            console.log('第一個元素:', data[0]);
+            console.log('第一個元素類型:', typeof data[0]);
+        }
+    }
+}
+</script>
+
+<!-- 使用說明 -->
+<!-- 
+1. 將上面的 updateClassOptions 函數替換到你的 Vercel 版本的 index.html 中
+2. 將 loadClasses 函數也替換過去
+3. 這個版本會自動處理不同的資料格式
+4. 包含調試功能，可以在瀏覽器控制台查看具體的資料格式
+-->
+
+<!-- 快速修復步驟 for Vercel -->
+<!--
+1. 打開 https://vercel.com/dashboard
+2. 找到你的 student-management-system 項目
+3. 進入 Settings -> Functions
+4. 檢查環境變數 GOOGLE_APPS_SCRIPT_URL 是否正確設定
+5. 如果沒有，添加:
+   GOOGLE_APPS_SCRIPT_URL = https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec
+6. 重新部署
+--> 

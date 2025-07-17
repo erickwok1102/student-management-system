@@ -712,7 +712,16 @@
                 showNotification('正在從雲端載入...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入資料...';
                 
-                const response = await fetch(window.location.origin + '/api/get-students');
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
+                    method: 'GET',
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
                 const result = await response.json();
                 
                 if (result.success && result.students) {
@@ -735,7 +744,16 @@
         // 靜默從雲端載入
         async function loadFromCloudSilently() {
             try {
-                const response = await fetch(window.location.origin + '/api/get-students');
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
+                    method: 'GET',
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
                 const result = await response.json();
                 
                 if (result.success && result.students && result.students.length > 0) {
@@ -794,27 +812,45 @@
                 showNotification('正在載入班別資料...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
                 
-                // 直接連接 Google Apps Script
+                // 從學員資料中提取班別資訊 (更穩定的方法)
                 const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
-                
-                const response = await fetch(`${GOOGLE_APPS_SCRIPT_URL}?action=getClasses`, {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
                     method: 'GET',
-                    redirect: 'follow'
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
                 });
+                
                 const result = await response.json();
                 
-                if (result.success && result.classes) {
-                    updateClassOptions(result.classes);
-                    showNotification(`✅ 成功載入 ${result.count} 個班別`, 'success');
-                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 個班別 (${new Date().toLocaleString('zh-TW')})`;
-                } else if (result.error === 'Missing Google Apps Script URL configuration') {
-                    showNotification('⚠️ 請先設定 Google Apps Script URL', 'warning');
-                    document.getElementById('syncStatus').textContent = '⚠️ 請先設定 Google Apps Script URL';
-                } else if (result.error === 'Invalid action') {
-                    showNotification('⚠️ 請更新 Google Apps Script 代碼以支援班別載入功能', 'warning');
-                    document.getElementById('syncStatus').textContent = '⚠️ 請更新 Google Apps Script 代碼以支援 getClasses 功能';
+                if (result.success && result.students) {
+                    // 從學員資料中提取唯一的班別名稱
+                    const classNames = new Set();
+                    
+                    result.students.forEach(student => {
+                        if (student && typeof student === 'object') {
+                            // 檢查多種可能的班別欄位名稱
+                            const className = student.class || student['班別'] || student.class_id || student['class'] || student['班組'];
+                            if (className && typeof className === 'string' && className.trim()) {
+                                classNames.add(className.trim());
+                            }
+                        }
+                    });
+                    
+                    const uniqueClasses = Array.from(classNames);
+                    console.log('🎯 從學員資料提取的班別:', uniqueClasses);
+                    
+                    if (uniqueClasses.length > 0) {
+                        updateClassOptions(uniqueClasses); // 直接傳遞字符串陣列
+                        showNotification(`✅ 成功載入 ${uniqueClasses.length} 個班別`, 'success');
+                        document.getElementById('syncStatus').textContent = `✅ 成功載入 ${uniqueClasses.length} 個班別 (${new Date().toLocaleString('zh-TW')})`;
+                    } else {
+                        showNotification('⚠️ 沒有找到班別資料，請檢查學員資料中的班別欄位', 'warning');
+                        document.getElementById('syncStatus').textContent = '⚠️ 沒有找到班別資料';
+                    }
                 } else {
-                    throw new Error(result.error || '載入班別失敗');
+                    throw new Error(result.error || '載入學員資料失敗');
                 }
             } catch (error) {
                 console.error('載入班別失敗:', error);
@@ -836,28 +872,35 @@
                 if (select) {
                     select.innerHTML = '<option value="">請選擇班別</option>';
                     
-                    // 處理不同的資料格式
                     let classNames = [];
                     
-                    if (Array.isArray(classData)) {
+                    // 如果傳入的直接是字符串陣列 (新的簡化方式)
+                    if (Array.isArray(classData) && classData.length > 0 && typeof classData[0] === 'string') {
+                        classNames = classData.filter(name => name && name.trim());
+                    }
+                    // 如果是物件陣列 (舊的複雜方式)
+                    else if (Array.isArray(classData)) {
                         classNames = classData.map(item => {
-                            // 如果是對象，提取 class_id 或 名稱 欄位
+                            // 如果是對象，提取 class_id 或其他可能的班別名稱欄位
                             if (typeof item === 'object' && item !== null) {
-                                return item.class_id || item['名稱'] || item.name || item.className || '';
+                                return item.class_id || item['class_name'] || item['名稱'] || item.name || item.className || item['班別'] || '';
                             }
                             // 如果是字符串，直接使用
                             return item || '';
-                        });
+                        }).filter(name => name && typeof name === 'string' && name.trim()); // 確保是有效的字符串
                     }
                     
-                    classNames.forEach(className => {
-                        if (className && typeof className === 'string' && className.trim()) {
-                            const option = document.createElement('option');
-                            option.value = className.trim();
-                            option.textContent = className.trim();
-                            select.appendChild(option);
-                        }
+                    // 去重並排序
+                    const uniqueClassNames = [...new Set(classNames)].sort();
+                    
+                    uniqueClassNames.forEach(className => {
+                        const option = document.createElement('option');
+                        option.value = className.trim();
+                        option.textContent = className.trim();
+                        select.appendChild(option);
                     });
+                    
+                    console.log('🎯 班別選項已更新:', uniqueClassNames);
                 }
             });
         }
@@ -870,7 +913,16 @@
                 showNotification('正在載入課堂資料...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入課堂資料...';
                 
-                const response = await fetch(window.location.origin + '/api/get-schedule');
+                // 直接連接 Google Apps Script
+                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getSchedule', {
+                    method: 'GET',
+                    redirect: 'follow',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
                 const result = await response.json();
                 
                 if (result.success && result.schedule) {
