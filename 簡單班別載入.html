@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>簡單班別載入測試</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            max-width: 600px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            background: #f5f5f5;
+        }
+        .card { 
+            background: white; 
+            padding: 30px; 
+            border-radius: 10px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin: 20px 0;
+        }
+        button { 
+            background: #007bff; 
+            color: white; 
+            border: none; 
+            padding: 15px 30px; 
+            border-radius: 5px; 
+            cursor: pointer; 
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0056b3; }
+        select { 
+            width: 100%; 
+            padding: 10px; 
+            border: 1px solid #ddd; 
+            border-radius: 5px; 
+            font-size: 16px;
+            margin: 10px 0;
+        }
+        #log { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            white-space: pre-wrap; 
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🎯 簡單班別載入測試</h1>
+        <p>目標：從 Google Sheets 載入課堂資料到下拉選單</p>
+        
+        <button onclick="loadClassesSimple()">📥 載入班別 (方法1: 從學員資料)</button>
+        <button onclick="loadClassesFromSchedule()">📅 載入班別 (方法2: 從課程表)</button>
+        <button onclick="clearLog()">🧹 清除日誌</button>
+        
+        <h3>班別選擇:</h3>
+        <select id="classSelect">
+            <option value="">請選擇班別</option>
+        </select>
+        
+        <h3>執行日誌:</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : 'info';
+            logDiv.innerHTML += `<span class="${className}">[${timestamp}] ${message}</span>\n`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(message);
+        }
+        
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+        }
+        
+        function updateClassSelect(classes) {
+            const select = document.getElementById('classSelect');
+            select.innerHTML = '<option value="">請選擇班別</option>';
+            
+            if (Array.isArray(classes) && classes.length > 0) {
+                classes.forEach(className => {
+                    if (className) {
+                        const option = document.createElement('option');
+                        option.value = className;
+                        option.textContent = className;
+                        select.appendChild(option);
+                    }
+                });
+                log(`✅ 成功添加 ${classes.length} 個班別到選單`, 'success');
+            } else {
+                log('⚠️ 沒有班別資料可以添加', 'error');
+            }
+        }
+        
+        // 方法1: 從學員資料提取班別
+        async function loadClassesSimple() {
+            try {
+                log('🔄 開始從學員資料載入班別...', 'info');
+                
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                
+                log(`📡 API 回應狀態: ${response.status}`, 'info');
+                
+                const result = await response.json();
+                log(`📋 API 回應: ${JSON.stringify(result, null, 2)}`, 'info');
+                
+                if (result.success && result.students) {
+                    log(`👥 找到 ${result.students.length} 位學員`, 'info');
+                    
+                    // 提取班別
+                    const classSet = new Set();
+                    result.students.forEach((student, index) => {
+                        log(`檢查學員 ${index + 1}: ${JSON.stringify(student)}`, 'info');
+                        
+                        // 檢查各種可能的班別欄位
+                        const possibleFields = ['class', '班別', 'class_id', 'className', '班組'];
+                        let foundClass = null;
+                        
+                        possibleFields.forEach(field => {
+                            if (student[field] && typeof student[field] === 'string') {
+                                foundClass = student[field].trim();
+                                log(`✅ 在欄位 "${field}" 找到班別: "${foundClass}"`, 'success');
+                            }
+                        });
+                        
+                        if (foundClass) {
+                            classSet.add(foundClass);
+                        }
+                    });
+                    
+                    const uniqueClasses = Array.from(classSet);
+                    log(`🎯 提取到的唯一班別: ${JSON.stringify(uniqueClasses)}`, 'success');
+                    
+                    updateClassSelect(uniqueClasses);
+                    
+                } else {
+                    log(`❌ 載入失敗: ${result.error || '未知錯誤'}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ 錯誤: ${error.message}`, 'error');
+            }
+        }
+        
+        // 方法2: 直接從課程表載入
+        async function loadClassesFromSchedule() {
+            try {
+                log('🔄 開始從課程表載入班別...', 'info');
+                
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getSchedule', {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+                
+                log(`📡 API 回應狀態: ${response.status}`, 'info');
+                
+                const result = await response.json();
+                log(`📅 課程表回應: ${JSON.stringify(result, null, 2)}`, 'info');
+                
+                if (result.success && result.schedule) {
+                    log(`📅 找到 ${result.schedule.length} 筆課程資料`, 'info');
+                    
+                    // 提取班別
+                    const classSet = new Set();
+                    result.schedule.forEach((scheduleItem, index) => {
+                        log(`檢查課程 ${index + 1}: ${JSON.stringify(scheduleItem)}`, 'info');
+                        
+                        // 檢查各種可能的班別欄位
+                        const possibleFields = ['class_id', 'class_name', '班別', 'name', 'className'];
+                        let foundClass = null;
+                        
+                        possibleFields.forEach(field => {
+                            if (scheduleItem[field] && typeof scheduleItem[field] === 'string') {
+                                foundClass = scheduleItem[field].trim();
+                                log(`✅ 在欄位 "${field}" 找到班別: "${foundClass}"`, 'success');
+                            }
+                        });
+                        
+                        if (foundClass) {
+                            classSet.add(foundClass);
+                        }
+                    });
+                    
+                    const uniqueClasses = Array.from(classSet);
+                    log(`🎯 提取到的唯一班別: ${JSON.stringify(uniqueClasses)}`, 'success');
+                    
+                    updateClassSelect(uniqueClasses);
+                    
+                } else {
+                    log(`❌ 載入失敗: ${result.error || '未知錯誤'}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ 錯誤: ${error.message}`, 'error');
+            }
+        }
+        
+        // 頁面載入時顯示資訊
+        window.onload = function() {
+            log('🎯 簡單班別載入測試工具已準備就緒', 'info');
+            log(`📍 Google Apps Script URL: ${GOOGLE_APPS_SCRIPT_URL}`, 'info');
+            log('💡 請點擊上方按鈕測試不同的載入方法', 'info');
+        };
+    </script>
+</body>
+</html> 

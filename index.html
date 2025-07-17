@@ -806,63 +806,44 @@
             showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
         }
 
-        // 載入班別資料
+        // 載入班別資料 - 超簡單版本：直接從現有學員資料提取
         async function loadClasses() {
             try {
-                showNotification('正在載入班別資料...', 'warning');
-                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
+                console.log('🎯 從現有學員資料提取班別...');
                 
-                // 從學員資料中提取班別資訊 (更穩定的方法)
-                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
-                    method: 'GET',
-                    redirect: 'follow',
-                    headers: {
-                        'Content-Type': 'application/json'
+                if (!students || students.length === 0) {
+                    console.log('⚠️ 沒有學員資料，先載入學員');
+                    await loadFromCloud(); // 確保有學員資料
+                }
+                
+                // 直接從現有學員陣列提取班別
+                const classSet = new Set();
+                students.forEach(student => {
+                    // 檢查班別欄位
+                    const className = student.class || student['班別'] || student.class_id || student['班組'];
+                    if (className && typeof className === 'string' && className.trim()) {
+                        classSet.add(className.trim());
                     }
                 });
                 
-                const result = await response.json();
+                const uniqueClasses = Array.from(classSet).sort();
+                console.log('🎯 提取的班別:', uniqueClasses);
                 
-                if (result.success && result.students) {
-                    // 從學員資料中提取唯一的班別名稱
-                    const classNames = new Set();
-                    
-                    result.students.forEach(student => {
-                        if (student && typeof student === 'object') {
-                            // 檢查多種可能的班別欄位名稱
-                            const className = student.class || student['班別'] || student.class_id || student['class'] || student['班組'];
-                            if (className && typeof className === 'string' && className.trim()) {
-                                classNames.add(className.trim());
-                            }
-                        }
-                    });
-                    
-                    const uniqueClasses = Array.from(classNames);
-                    console.log('🎯 從學員資料提取的班別:', uniqueClasses);
-                    
-                    if (uniqueClasses.length > 0) {
-                        updateClassOptions(uniqueClasses); // 直接傳遞字符串陣列
-                        showNotification(`✅ 成功載入 ${uniqueClasses.length} 個班別`, 'success');
-                        document.getElementById('syncStatus').textContent = `✅ 成功載入 ${uniqueClasses.length} 個班別 (${new Date().toLocaleString('zh-TW')})`;
-                    } else {
-                        showNotification('⚠️ 沒有找到班別資料，請檢查學員資料中的班別欄位', 'warning');
-                        document.getElementById('syncStatus').textContent = '⚠️ 沒有找到班別資料';
-                    }
+                if (uniqueClasses.length > 0) {
+                    updateClassSelectSimple(uniqueClasses);
+                    showNotification(`✅ 從 ${students.length} 位學員中找到 ${uniqueClasses.length} 個班別`, 'success');
                 } else {
-                    throw new Error(result.error || '載入學員資料失敗');
+                    showNotification('⚠️ 學員資料中沒有班別資訊', 'warning');
                 }
+                
             } catch (error) {
-                console.error('載入班別失敗:', error);
-                showNotification('❌ 載入班別失敗，請檢查 Google Apps Script 設定', 'error');
-                document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
+                console.error('提取班別失敗:', error);
+                showNotification('❌ 提取班別失敗: ' + error.message, 'error');
             }
         }
 
-
-
-        // 更新班別選項
-        function updateClassOptions(classData) {
+        // 簡化的班別選單更新
+        function updateClassSelectSimple(classes) {
             const selects = [
                 document.getElementById('studentClass'),
                 document.getElementById('attendanceClass')
@@ -871,181 +852,18 @@
             selects.forEach(select => {
                 if (select) {
                     select.innerHTML = '<option value="">請選擇班別</option>';
-                    
-                    let classNames = [];
-                    
-                    // 如果傳入的直接是字符串陣列 (新的簡化方式)
-                    if (Array.isArray(classData) && classData.length > 0 && typeof classData[0] === 'string') {
-                        classNames = classData.filter(name => name && name.trim());
-                    }
-                    // 如果是物件陣列 (舊的複雜方式)
-                    else if (Array.isArray(classData)) {
-                        classNames = classData.map(item => {
-                            // 如果是對象，提取 class_id 或其他可能的班別名稱欄位
-                            if (typeof item === 'object' && item !== null) {
-                                return item.class_id || item['class_name'] || item['名稱'] || item.name || item.className || item['班別'] || '';
-                            }
-                            // 如果是字符串，直接使用
-                            return item || '';
-                        }).filter(name => name && typeof name === 'string' && name.trim()); // 確保是有效的字符串
-                    }
-                    
-                    // 去重並排序
-                    const uniqueClassNames = [...new Set(classNames)].sort();
-                    
-                    uniqueClassNames.forEach(className => {
+                    classes.forEach(className => {
                         const option = document.createElement('option');
-                        option.value = className.trim();
-                        option.textContent = className.trim();
+                        option.value = className;
+                        option.textContent = className;
                         select.appendChild(option);
                     });
-                    
-                    console.log('🎯 班別選項已更新:', uniqueClassNames);
                 }
             });
+            console.log('✅ 班別選單已更新');
         }
 
-
-
-        // 載入課堂資料
-        async function loadSchedule() {
-            try {
-                showNotification('正在載入課堂資料...', 'warning');
-                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入課堂資料...';
-                
-                // 直接連接 Google Apps Script
-                const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getSchedule', {
-                    method: 'GET',
-                    redirect: 'follow',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
-                const result = await response.json();
-                
-                if (result.success && result.schedule) {
-                    classes = result.schedule;
-                    localStorage.setItem('classesData', JSON.stringify(classes));
-                    displayClasses();
-                    console.log('📅 課堂資料:', result.schedule);
-                    showNotification(`✅ 成功載入 ${result.count} 堂課程`, 'success');
-                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 堂課程 (${new Date().toLocaleString('zh-TW')})`;
-                } else {
-                    throw new Error(result.error || '載入課堂資料失敗');
-                }
-            } catch (error) {
-                console.error('載入課堂資料失敗:', error);
-                showNotification('❌ 載入課堂資料失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = `❌ 載入課堂資料失敗: ${error.message}`;
-            }
-        }
-
-        // 新增班組
-        function addClass() {
-            const id = document.getElementById('classId').value.trim();
-            const name = document.getElementById('className').value.trim();
-            const startTime = document.getElementById('classStartTime').value;
-            const endTime = document.getElementById('classEndTime').value;
-            const weekday = document.getElementById('classWeekday').value;
-            const description = document.getElementById('classDescription').value.trim();
-
-            if (!name) {
-                showNotification('請填寫班組名稱', 'error');
-                return;
-            }
-
-            const newClass = {
-                id: id || 'CLASS_' + Date.now(),
-                name: name,
-                startTime: startTime,
-                endTime: endTime,
-                weekday: weekday,
-                description: description,
-                createdAt: new Date().toLocaleString('zh-TW')
-            };
-
-            classes.push(newClass);
-            localStorage.setItem('classesData', JSON.stringify(classes));
-            displayClasses();
-            clearClassForm();
-            showNotification(`✅ 班組「${name}」新增成功`, 'success');
-        }
-
-        // 顯示班組列表
-        function displayClasses() {
-            const list = document.getElementById('classesList');
-            
-            if (classes.length === 0) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <h3>📚 還沒有班組資料</h3>
-                        <p>點擊上方的「新增班組」按鈕開始建立你的班組資料</p>
-                </div>
-                `;
-                return;
-            }
-
-            list.innerHTML = classes.map(cls => `
-                <div class="student-item">
-                    <div>
-                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
-                            ${cls.name}
-                            ${cls.id ? `<span style="color: #666; font-weight: 400; font-size: 14px;">(${cls.id})</span>` : ''}
-                        </div>
-                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
-                            ${cls.startTime && cls.endTime ? `⏰ ${cls.startTime} - ${cls.endTime}` : ''}
-                            ${cls.weekday ? ` | 📅 星期${cls.weekday}` : ''}
-                        </div>
-                        <div style="color: #999; font-size: 13px;">
-                            ${cls.description ? `📝 ${cls.description}` : ''}
-                            ${cls.createdAt ? ` | 📅 ${cls.createdAt} 建立` : ''}
-                        </div>
-                    </div>
-                    <div>
-                        <button class="btn btn-danger" onclick="deleteClass('${cls.id}')" 
-                                title="刪除班組" style="padding: 10px 15px;">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // 刪除班組
-        function deleteClass(id) {
-            const cls = classes.find(c => c.id === id);
-            if (!cls) return;
-            
-            if (confirm(`⚠️ 確定要刪除班組「${cls.name}」嗎？\n\n此操作無法復原，請謹慎考慮。`)) {
-                classes = classes.filter(c => c.id !== id);
-                localStorage.setItem('classesData', JSON.stringify(classes));
-                displayClasses();
-                showNotification(`🗑️ 班組「${cls.name}」已刪除`, 'warning');
-            }
-        }
-
-        // 清空班組表單
-        function clearClassForm() {
-            document.getElementById('classId').value = '';
-            document.getElementById('className').value = '';
-            document.getElementById('classStartTime').value = '';
-            document.getElementById('classEndTime').value = '';
-            document.getElementById('classWeekday').value = '';
-            document.getElementById('classDescription').value = '';
-        }
-
-        // 載入班組資料
-        function loadClassesData() {
-            const saved = localStorage.getItem('classesData');
-            if (saved) {
-                classes = JSON.parse(saved);
-                displayClasses();
-            }
-        }
-
-        // 開始點名
+        // 開始點名 - 簡化版本，直接過濾學員
         function startAttendance() {
             const date = document.getElementById('attendanceDate').value;
             const className = document.getElementById('attendanceClass').value;
@@ -1055,16 +873,21 @@
                 return;
             }
             
-            currentAttendanceDate = date;
-            currentAttendanceClass = className;
+            // 直接從學員陣列過濾該班別的學員
+            const classStudents = students.filter(student => {
+                const studentClass = student.class || student['班別'] || student.class_id || student['班組'];
+                return studentClass && studentClass.trim() === className;
+            });
             
-            // 獲取該班別的學員
-            const classStudents = students.filter(s => s.class === className);
+            console.log(`🎯 ${className} 班找到 ${classStudents.length} 位學員:`, classStudents);
             
             if (classStudents.length === 0) {
-                showNotification(`${className} 沒有學員資料`, 'warning');
+                showNotification(`${className} 班沒有學員資料`, 'warning');
                 return;
             }
+            
+            currentAttendanceDate = date;
+            currentAttendanceClass = className;
             
             // 顯示點名列表
             displayAttendanceList(classStudents);
@@ -1073,7 +896,7 @@
             // 設置點名按鈕事件監聽器
             setupAttendanceButtons();
             
-            showNotification(`開始 ${className} 的點名`, 'success');
+            showNotification(`開始 ${className} 班的點名 (${classStudents.length} 位學員)`, 'success');
         }
         
         // 顯示點名列表
