@@ -335,7 +335,7 @@
                 <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">☁️ Google Sheets 同步</h3>
                 <div class="sync-grid">
                     <div class="sync-card">
-                        <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px;">📤 上傳到雲端</h4>
+                        <h4 style="color: #28a745; margin-bottom: 20px; font-size: 20px;">📤 上傳學員資料</h4>
                         <button class="btn btn-success" onclick="syncToCloud()" style="width: 100%; margin-bottom: 20px;">
                             ☁️ 同步學員到雲端
                         </button>
@@ -345,13 +345,26 @@
                         </p>
                     </div>
                     <div class="sync-card">
-                        <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">📥 從雲端載入</h4>
+                        <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">📥 載入學員資料</h4>
                         <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 20px;">
                             📥 從雲端載入學員
                         </button>
                         <p style="font-size: 14px; color: #666; line-height: 1.6;">
                             從 Google Sheets 載入學員資料<br>
                             <strong>注意：</strong>會覆蓋本地現有資料
+                        </p>
+                    </div>
+                    <div class="sync-card">
+                        <h4 style="color: #ffc107; margin-bottom: 20px; font-size: 20px;">📋 點名記錄</h4>
+                        <button class="btn btn-warning" onclick="syncAttendanceToCloud()" style="width: 100%; margin-bottom: 10px;">
+                            📤 上傳點名記錄
+                        </button>
+                        <button class="btn btn-primary" onclick="showAttendanceRecords()" style="width: 100%; margin-bottom: 20px;">
+                            👀 查看本地記錄
+                        </button>
+                        <p style="font-size: 14px; color: #666; line-height: 1.6;">
+                            管理點名記錄，可查看或上傳到雲端<br>
+                            <strong>記錄數：</strong><span id="attendanceCount">0</span> 筆
                         </p>
                     </div>
                 </div>
@@ -846,51 +859,16 @@
             // 儲存到本地
             localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
             displayTodayAttendance();
+            updateAttendanceCount();
             
-            // 同步到 Google Sheets
-            try {
-                showNotification('正在同步點名記錄到 Google Sheets...', 'warning');
-                
-                // 準備同步資料
-                const attendanceForSync = todayAttendance.map(record => {
-                    const student = students.find(s => s.id === record.studentId);
-                    return {
-                        date: record.date,
-                        class: record.className,
-                        studentId: record.studentId,
-                        studentName: student ? student.name : record.studentId,
-                        status: record.status
-                    };
-                });
-                
-                const isVercel = window.location.hostname.includes('vercel.app');
-                const apiUrl = isVercel ? '/api/sync-attendance' : window.location.origin + '/api/sync-attendance';
-                
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        attendance: attendanceForSync
-                    })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showNotification(`✅ 已儲存並同步 ${todayAttendance.length} 筆點名記錄到 Google Sheets`, 'success');
-                } else {
-                    throw new Error(result.error || '同步失敗');
-                }
-                
-            } catch (error) {
-                console.error('同步點名記錄失敗:', error);
-                showNotification(`⚠️ 本地儲存成功，但同步到 Google Sheets 失敗: ${error.message}`, 'warning');
-            }
+            // 簡化版：只提示本地儲存成功，暫時不同步到雲端
+            showNotification(`✅ 已本地儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
             
             // 隱藏點名列表
             document.getElementById('attendanceListCard').style.display = 'none';
+            
+            // 如果用戶需要同步到Google Sheets，可以稍後在雲端同步頁面手動同步
+            console.log('點名記錄已儲存到本地，如需同步請使用雲端同步功能');
         }
         
         // 重新點名
@@ -914,6 +892,65 @@
                 todayAttendance = JSON.parse(saved);
             }
             displayTodayAttendance();
+            updateAttendanceCount();
+        }
+
+        // 更新點名記錄數量
+        function updateAttendanceCount() {
+            const countElement = document.getElementById('attendanceCount');
+            if (countElement) {
+                countElement.textContent = todayAttendance.length;
+            }
+        }
+
+        // 顯示點名記錄
+        function showAttendanceRecords() {
+            if (todayAttendance.length === 0) {
+                showNotification('沒有點名記錄', 'warning');
+                return;
+            }
+            
+            let recordsText = '📋 本地點名記錄：\n\n';
+            todayAttendance.forEach(record => {
+                recordsText += `📅 ${record.date} | 📚 ${record.className}\n`;
+                recordsText += `👤 ${record.studentName} - ${record.status}\n`;
+                recordsText += `⏰ ${record.createdAt}\n\n`;
+            });
+            
+            alert(recordsText);
+        }
+
+        // 同步點名記錄到雲端（簡化版）
+        function syncAttendanceToCloud() {
+            if (todayAttendance.length === 0) {
+                showNotification('沒有點名記錄可同步', 'warning');
+                return;
+            }
+            
+            // 簡化處理：提示用戶手動輸入到Google Sheets
+            const recordsForCopy = todayAttendance.map(record => 
+                `${record.date}\t${record.className}\t${record.studentName}\t${record.status}`
+            ).join('\n');
+            
+            const header = 'date\tclass\tstudentName\tstatus\n';
+            const fullData = header + recordsForCopy;
+            
+            // 複製到剪貼板
+            navigator.clipboard.writeText(fullData).then(() => {
+                showNotification(`✅ 已複製 ${todayAttendance.length} 筆記錄到剪貼板，可直接貼到Google Sheets`, 'success');
+                alert(`📋 點名記錄已複製到剪貼板！\n\n請到您的Google Sheets手動貼上：\n1. 開啟您的Google Sheets\n2. 選擇「attendance」工作表\n3. 按Ctrl+V貼上資料\n\n記錄格式：日期 | 班別 | 學員姓名 | 狀態`);
+            }).catch(() => {
+                // 如果複製失敗，顯示資料讓用戶手動複製
+                const textarea = document.createElement('textarea');
+                textarea.value = fullData;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                
+                showNotification('請手動複製下方資料到Google Sheets', 'warning');
+                alert(`請複製以下資料到Google Sheets：\n\n${fullData}`);
+            });
         }
         
         // 顯示今日出席記錄
@@ -1011,4 +1048,4 @@
         }
     </script>
 </body>
-</html>
+</html> 
