@@ -155,7 +155,7 @@
         .empty-state p { font-size: 16px; line-height: 1.6; }
         
         /* 點名按鈕樣式 */
-        .attendance-btn {
+        .attendance-btn, .attendance-choice-btn {
             transition: all 0.3s ease !important;
             border: 2px solid transparent !important;
             font-weight: 600 !important;
@@ -163,22 +163,22 @@
             cursor: pointer !important;
         }
         
-        .attendance-btn:hover {
+        .attendance-btn:hover, .attendance-choice-btn:hover {
             transform: translateY(-2px) !important;
             box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
         }
         
-        .attendance-btn:active {
+        .attendance-btn:active, .attendance-choice-btn:active {
             transform: translateY(0) !important;
         }
         
-        .attendance-btn.selected {
+        .attendance-btn.selected, .attendance-choice-btn.selected {
             border: 3px solid #fff !important;
             box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25), 0 4px 12px rgba(0,0,0,0.3) !important;
             transform: scale(0.95) !important;
         }
         
-        .attendance-btn .check-mark {
+        .attendance-btn .check-mark, .attendance-choice-btn .check-mark {
             animation: checkMarkAppear 0.3s ease !important;
         }
         
@@ -407,6 +407,9 @@
         let todayAttendance = [];
         let currentAttendanceClass = '';
         let currentAttendanceDate = '';
+
+        // 全域變數 - 用於臨時儲存點名選擇
+        let tempAttendanceChoices = {}; // 格式: { studentId: status }
 
         // 初始化
         document.addEventListener('DOMContentLoaded', async () => {
@@ -793,6 +796,9 @@
         function displayAttendanceList(classStudents) {
             const container = document.getElementById('attendanceStudentsList');
             
+            // 清空臨時選擇
+            tempAttendanceChoices = {};
+            
             container.innerHTML = classStudents.map(student => `
                 <div class="student-item" style="margin-bottom: 20px; padding: 20px; border-radius: 15px;">
                     <div style="margin-bottom: 15px;">
@@ -801,28 +807,28 @@
                             ${student.nickname ? `<span style="color: #666; font-size: 16px;">(${student.nickname})</span>` : ''}
                         </div>
                         <div style="font-size: 14px; color: #666;">
-                            學員ID: ${student.id}
+                            班別: ${student.class}
                         </div>
                     </div>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
-                        <button class="attendance-btn btn btn-success" 
-                                onclick="markAttendanceNew('${student.id}', '出席', this)"
+                        <button class="attendance-choice-btn btn btn-success" 
+                                onclick="selectAttendanceStatus('${student.id}', '出席', this)"
                                 data-student-id="${student.id}" 
                                 data-status="出席" 
                                 style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
                             <span class="btn-text">✅ 出席</span>
                             <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #28a745; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
-                        <button class="attendance-btn btn btn-warning" 
-                                onclick="markAttendanceNew('${student.id}', '請假', this)"
+                        <button class="attendance-choice-btn btn btn-warning" 
+                                onclick="selectAttendanceStatus('${student.id}', '請假', this)"
                                 data-student-id="${student.id}" 
                                 data-status="請假" 
                                 style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
                             <span class="btn-text">🏥 請假</span>
                             <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #ffc107; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
-                        <button class="attendance-btn btn btn-primary" 
-                                onclick="markAttendanceNew('${student.id}', '遲到', this)"
+                        <button class="attendance-choice-btn btn btn-primary" 
+                                onclick="selectAttendanceStatus('${student.id}', '遲到', this)"
                                 data-student-id="${student.id}" 
                                 data-status="遲到" 
                                 style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
@@ -833,90 +839,48 @@
                 </div>
             `).join('');
             
-            console.log('✅ 點名列表已生成，包含 onclick 事件');
+            console.log('✅ 點名列表已生成');
+            console.log('學員列表:', classStudents.map(s => ({ id: s.id, name: s.name })));
         }
-        
-        // 新的標記出席狀態函數 - 直接透過 onclick 調用
-        function markAttendanceNew(studentId, status, clickedButton) {
-            console.log('=== 新的標記出席狀態 ===');
+
+        // 選擇出席狀態（只更新界面，不立即儲存）
+        function selectAttendanceStatus(studentId, status, clickedButton) {
+            console.log('=== 選擇出席狀態 ===');
             console.log('學員ID:', studentId);
-            console.log('狀態:', status);
-            console.log('點擊的按鈕:', clickedButton);
-            console.log('當前日期:', currentAttendanceDate);
-            console.log('當前班別:', currentAttendanceClass);
+            console.log('選擇狀態:', status);
             
-            // 檢查必要的變數
-            if (!currentAttendanceDate || !currentAttendanceClass) {
-                console.error('❌ 缺少必要變數');
-                showNotification('請重新開始點名', 'error');
-                return;
-            }
+            // 記錄臨時選擇
+            tempAttendanceChoices[studentId] = status;
+            console.log('目前臨時選擇:', tempAttendanceChoices);
             
-            const student = students.find(s => s.id === studentId);
-            if (!student) {
-                console.error('❌ 找不到學員:', studentId);
-                showNotification('找不到學員資料', 'error');
-                return;
-            }
-            
-            console.log('✅ 找到學員:', student.name);
-            
-            // 移除該學員的舊記錄
-            const originalLength = todayAttendance.length;
-            todayAttendance = todayAttendance.filter(att => 
-                !(att.studentId === studentId && att.date === currentAttendanceDate && att.className === currentAttendanceClass)
-            );
-            
-            if (todayAttendance.length < originalLength) {
-                console.log(`🗑️ 移除了 ${originalLength - todayAttendance.length} 筆舊記錄`);
-            }
-            
-            // 添加新記錄
-            const newRecord = {
-                id: 'ATT_' + Date.now(),
-                date: currentAttendanceDate,
-                className: currentAttendanceClass,
-                studentId: studentId,
-                studentName: student.name,
-                status: status,
-                createdAt: new Date().toLocaleString('zh-TW')
-            };
-            
-            todayAttendance.push(newRecord);
-            console.log('✅ 新增記錄:', newRecord);
-            console.log('目前總記錄數:', todayAttendance.length);
-            
-            // 更新該學員的所有按鈕狀態
+            // 更新該學員的按鈕視覺狀態
             const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
-            console.log(`找到 ${studentButtons.length} 個按鈕需要更新`);
             
-            // 重置所有按鈕狀態
+            // 重置所有按鈕
             studentButtons.forEach(btn => {
                 btn.classList.remove('selected');
                 btn.style.backgroundColor = '';
                 btn.style.borderColor = '';
                 btn.style.transform = 'scale(1)';
                 
-                // 隱藏所有勾號
                 const checkMark = btn.querySelector('.check-mark');
                 if (checkMark) {
                     checkMark.style.display = 'none';
                 }
             });
             
-            // 設定點擊按鈕為選中狀態
+            // 設定選中按鈕的樣式
             if (clickedButton) {
                 clickedButton.classList.add('selected');
                 clickedButton.style.transform = 'scale(0.95)';
                 clickedButton.style.borderWidth = '3px';
                 
-                // 顯示勾號
                 const checkMark = clickedButton.querySelector('.check-mark');
                 if (checkMark) {
                     checkMark.style.display = 'block';
                 }
                 
-                // 根據狀態設定不同的強調色
+                // 根據狀態設定顏色
                 switch(status) {
                     case '出席':
                         clickedButton.style.backgroundColor = '#198754';
@@ -931,68 +895,110 @@
                         clickedButton.style.borderColor = '#0a58ca';
                         break;
                 }
-                
-                console.log('✅ 按鈕視覺狀態已更新');
             }
             
-            // 顯示成功訊息
-            showNotification(`✅ ${student.name} 已標記為「${status}」`, 'success');
+            // 找到學員資料顯示姓名
+            const student = students.find(s => s.id === studentId);
+            const studentName = student ? student.name : `學員${studentId}`;
             
-            // 播放點擊音效（如果支援的話）
-            try {
-                // 創建短暫的音效反饋
-                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
-                
-                oscillator.start(audioContext.currentTime);
-                oscillator.stop(audioContext.currentTime + 0.1);
-            } catch (e) {
-                // 音效不支援時忽略
-            }
+            showNotification(`${studentName} 選擇：${status}`, 'success');
+            
+            // 更新儲存按鈕狀態
+            updateSaveButtonStatus();
         }
 
+        // 更新儲存按鈕狀態
+        function updateSaveButtonStatus() {
+            const totalStudents = document.querySelectorAll('[data-student-id]').length / 3; // 每個學員有3個按鈕
+            const selectedCount = Object.keys(tempAttendanceChoices).length;
+            
+            console.log(`已選擇 ${selectedCount}/${totalStudents} 位學員`);
+            
+            // 這裡可以添加視覺提示，比如顯示進度
+            if (selectedCount === totalStudents && totalStudents > 0) {
+                showNotification(`✅ 已為所有 ${totalStudents} 位學員選擇狀態，可以儲存了！`, 'success');
+            }
+        }
+        
         // 設置點名按鈕事件監聽器 - 現在改用 onclick，這個函數保留但簡化
         function setupAttendanceButtons() {
             console.log('✅ 點名按鈕使用直接 onclick 事件，無需額外設置');
         }
 
-        // 儲存點名記錄
+        // 儲存點名記錄 - 將臨時選擇轉為正式記錄
         async function saveAttendance() {
             console.log('=== 開始儲存點名記錄 ===');
-            console.log('當前點名記錄:', todayAttendance);
-            console.log('記錄數量:', todayAttendance.length);
+            console.log('臨時選擇:', tempAttendanceChoices);
+            console.log('當前日期:', currentAttendanceDate);
+            console.log('當前班別:', currentAttendanceClass);
             
-            if (todayAttendance.length === 0) {
-                showNotification('請先為學員標記出席狀態', 'warning');
-                console.log('❌ 沒有點名記錄，停止儲存');
+            // 檢查是否有選擇
+            if (Object.keys(tempAttendanceChoices).length === 0) {
+                showNotification('請先為學員選擇出席狀態', 'warning');
+                console.log('❌ 沒有任何選擇');
+                return;
+            }
+            
+            // 檢查必要變數
+            if (!currentAttendanceDate || !currentAttendanceClass) {
+                showNotification('缺少日期或班別資訊，請重新開始點名', 'error');
+                console.log('❌ 缺少必要變數');
                 return;
             }
             
             try {
+                // 清除該日期該班別的舊記錄
+                const originalLength = todayAttendance.length;
+                todayAttendance = todayAttendance.filter(att => 
+                    !(att.date === currentAttendanceDate && att.className === currentAttendanceClass)
+                );
+                
+                if (todayAttendance.length < originalLength) {
+                    console.log(`🗑️ 清除了 ${originalLength - todayAttendance.length} 筆舊記錄`);
+                }
+                
+                // 將臨時選擇轉為正式記錄
+                const newRecords = [];
+                for (const [studentId, status] of Object.entries(tempAttendanceChoices)) {
+                    const student = students.find(s => s.id === studentId);
+                    const studentName = student ? student.name : `未知學員(${studentId})`;
+                    
+                    const record = {
+                        id: 'ATT_' + Date.now() + '_' + studentId,
+                        date: currentAttendanceDate,
+                        className: currentAttendanceClass,
+                        studentId: studentId,
+                        studentName: studentName,
+                        status: status,
+                        createdAt: new Date().toLocaleString('zh-TW')
+                    };
+                    
+                    newRecords.push(record);
+                    todayAttendance.push(record);
+                }
+                
+                console.log('✅ 新增的記錄:', newRecords);
+                console.log('目前總記錄數:', todayAttendance.length);
+                
                 // 儲存到本地
                 localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
                 console.log('✅ 已儲存到 localStorage');
                 
-                // 驗證儲存是否成功
+                // 驗證儲存
                 const savedData = localStorage.getItem('todayAttendance');
                 const parsedData = JSON.parse(savedData);
-                console.log('✅ 驗證儲存成功，記錄數:', parsedData.length);
+                console.log('✅ 驗證儲存成功，總記錄數:', parsedData.length);
+                
+                // 清空臨時選擇
+                tempAttendanceChoices = {};
                 
                 // 更新顯示
                 displayTodayAttendance();
                 updateAttendanceCount();
                 
                 // 顯示成功訊息
-                showNotification(`✅ 已本地儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
-                console.log(`✅ 儲存完成，共 ${todayAttendance.length} 筆記錄`);
+                showNotification(`✅ 已儲存 ${newRecords.length} 筆點名記錄`, 'success');
+                console.log(`✅ 儲存完成，新增 ${newRecords.length} 筆記錄`);
                 
                 // 隱藏點名列表
                 document.getElementById('attendanceListCard').style.display = 'none';
