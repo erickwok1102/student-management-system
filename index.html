@@ -160,6 +160,7 @@
             border: 2px solid transparent !important;
             font-weight: 600 !important;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+            cursor: pointer !important;
         }
         
         .attendance-btn:hover {
@@ -171,24 +172,44 @@
             transform: translateY(0) !important;
         }
         
-        .attendance-btn.active {
-            border: 2px solid #fff !important;
-            box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.25) !important;
+        .attendance-btn.selected {
+            border: 3px solid #fff !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25), 0 4px 12px rgba(0,0,0,0.3) !important;
+            transform: scale(0.95) !important;
         }
         
-        .btn-success.active {
+        .attendance-btn .check-mark {
+            animation: checkMarkAppear 0.3s ease !important;
+        }
+        
+        @keyframes checkMarkAppear {
+            0% { 
+                transform: scale(0) rotate(180deg); 
+                opacity: 0; 
+            }
+            50% { 
+                transform: scale(1.2) rotate(0deg); 
+                opacity: 1; 
+            }
+            100% { 
+                transform: scale(1) rotate(0deg); 
+                opacity: 1; 
+            }
+        }
+        
+        .btn-success.selected {
             background-color: #198754 !important;
-            transform: scale(0.95) !important;
+            border-color: #146c43 !important;
         }
         
-        .btn-warning.active {
-            background-color: #ffc107 !important;
-            transform: scale(0.95) !important;
+        .btn-warning.selected {
+            background-color: #fd7e14 !important;
+            border-color: #fd7e14 !important;
         }
         
-        .btn-primary.active {
+        .btn-primary.selected {
             background-color: #0d6efd !important;
-            transform: scale(0.95) !important;
+            border-color: #0a58ca !important;
         }
 
         /* 響應式設計 */
@@ -773,38 +794,63 @@
             const container = document.getElementById('attendanceStudentsList');
             
             container.innerHTML = classStudents.map(student => `
-                <div class="student-item" style="margin-bottom: 15px;">
-                    <div>
-                        <div style="font-size: 18px; font-weight: 600; margin-bottom: 8px;">
+                <div class="student-item" style="margin-bottom: 20px; padding: 20px; border-radius: 15px;">
+                    <div style="margin-bottom: 15px;">
+                        <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #333;">
                             ${student.name}
-                            ${student.nickname ? `<span style="color: #666; font-size: 14px;">(${student.nickname})</span>` : ''}
+                            ${student.nickname ? `<span style="color: #666; font-size: 16px;">(${student.nickname})</span>` : ''}
+                        </div>
+                        <div style="font-size: 14px; color: #666;">
+                            學員ID: ${student.id}
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-                        <button class="btn btn-success attendance-btn" data-student-id="${student.id}" data-status="出席" 
-                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
-                            ✅ 出席
+                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                        <button class="attendance-btn btn btn-success" 
+                                onclick="markAttendanceNew('${student.id}', '出席', this)"
+                                data-student-id="${student.id}" 
+                                data-status="出席" 
+                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
+                            <span class="btn-text">✅ 出席</span>
+                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #28a745; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
-                        <button class="btn btn-warning attendance-btn" data-student-id="${student.id}" data-status="請假" 
-                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
-                            🏥 請假
+                        <button class="attendance-btn btn btn-warning" 
+                                onclick="markAttendanceNew('${student.id}', '請假', this)"
+                                data-student-id="${student.id}" 
+                                data-status="請假" 
+                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
+                            <span class="btn-text">🏥 請假</span>
+                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #ffc107; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
-                        <button class="btn btn-primary attendance-btn" data-student-id="${student.id}" data-status="遲到" 
-                                style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
-                            ⏰ 遲到
+                        <button class="attendance-btn btn btn-primary" 
+                                onclick="markAttendanceNew('${student.id}', '遲到', this)"
+                                data-student-id="${student.id}" 
+                                data-status="遲到" 
+                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
+                            <span class="btn-text">⏰ 遲到</span>
+                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #007bff; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
                     </div>
                 </div>
             `).join('');
+            
+            console.log('✅ 點名列表已生成，包含 onclick 事件');
         }
         
-        // 標記出席狀態
-        function markAttendance(studentId, status) {
-            console.log('=== 標記出席狀態 ===');
+        // 新的標記出席狀態函數 - 直接透過 onclick 調用
+        function markAttendanceNew(studentId, status, clickedButton) {
+            console.log('=== 新的標記出席狀態 ===');
             console.log('學員ID:', studentId);
             console.log('狀態:', status);
+            console.log('點擊的按鈕:', clickedButton);
             console.log('當前日期:', currentAttendanceDate);
             console.log('當前班別:', currentAttendanceClass);
+            
+            // 檢查必要的變數
+            if (!currentAttendanceDate || !currentAttendanceClass) {
+                console.error('❌ 缺少必要變數');
+                showNotification('請重新開始點名', 'error');
+                return;
+            }
             
             const student = students.find(s => s.id === studentId);
             if (!student) {
@@ -840,52 +886,84 @@
             console.log('✅ 新增記錄:', newRecord);
             console.log('目前總記錄數:', todayAttendance.length);
             
-            // 更新按鈕狀態
+            // 更新該學員的所有按鈕狀態
             const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
             console.log(`找到 ${studentButtons.length} 個按鈕需要更新`);
             
+            // 重置所有按鈕狀態
             studentButtons.forEach(btn => {
-                btn.classList.remove('active');
-                btn.style.opacity = '1';
+                btn.classList.remove('selected');
+                btn.style.backgroundColor = '';
+                btn.style.borderColor = '';
                 btn.style.transform = 'scale(1)';
-                btn.style.border = '2px solid transparent';
-                btn.style.boxShadow = 'none';
+                
+                // 隱藏所有勾號
+                const checkMark = btn.querySelector('.check-mark');
+                if (checkMark) {
+                    checkMark.style.display = 'none';
+                }
             });
             
-            const clickedButton = document.querySelector(`button[data-student-id="${studentId}"][data-status="${status}"]`);
+            // 設定點擊按鈕為選中狀態
             if (clickedButton) {
-                clickedButton.classList.add('active');
-                clickedButton.style.opacity = '0.9';
+                clickedButton.classList.add('selected');
                 clickedButton.style.transform = 'scale(0.95)';
-                clickedButton.style.border = '2px solid #fff';
-                clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
-                console.log('✅ 按鈕樣式已更新');
-            } else {
-                console.error('❌ 找不到點擊的按鈕:', studentId, status);
+                clickedButton.style.borderWidth = '3px';
+                
+                // 顯示勾號
+                const checkMark = clickedButton.querySelector('.check-mark');
+                if (checkMark) {
+                    checkMark.style.display = 'block';
+                }
+                
+                // 根據狀態設定不同的強調色
+                switch(status) {
+                    case '出席':
+                        clickedButton.style.backgroundColor = '#198754';
+                        clickedButton.style.borderColor = '#146c43';
+                        break;
+                    case '請假':
+                        clickedButton.style.backgroundColor = '#fd7e14';
+                        clickedButton.style.borderColor = '#fd7e14';
+                        break;
+                    case '遲到':
+                        clickedButton.style.backgroundColor = '#0d6efd';
+                        clickedButton.style.borderColor = '#0a58ca';
+                        break;
+                }
+                
+                console.log('✅ 按鈕視覺狀態已更新');
             }
             
-            showNotification(`${student.name} 標記為 ${status}`, 'success');
-        }
-
-        // 設置點名按鈕事件監聽器
-        function setupAttendanceButtons() {
-            document.removeEventListener('click', attendanceClickHandler);
-            document.addEventListener('click', attendanceClickHandler);
-        }
-
-        // 點名按鈕點擊處理器
-        function attendanceClickHandler(event) {
-            if (event.target.classList.contains('attendance-btn')) {
-                event.preventDefault();
-                event.stopPropagation();
-                const studentId = event.target.getAttribute('data-student-id');
-                const status = event.target.getAttribute('data-status');
-                if (studentId && status) {
-                    markAttendance(studentId, status);
-                }
+            // 顯示成功訊息
+            showNotification(`✅ ${student.name} 已標記為「${status}」`, 'success');
+            
+            // 播放點擊音效（如果支援的話）
+            try {
+                // 創建短暫的音效反饋
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.1);
+            } catch (e) {
+                // 音效不支援時忽略
             }
         }
-        
+
+        // 設置點名按鈕事件監聽器 - 現在改用 onclick，這個函數保留但簡化
+        function setupAttendanceButtons() {
+            console.log('✅ 點名按鈕使用直接 onclick 事件，無需額外設置');
+        }
+
         // 儲存點名記錄
         async function saveAttendance() {
             console.log('=== 開始儲存點名記錄 ===');
