@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>學員管理系統 - Vercel版 v2.1</title>
+    <title>學員管理系統 - 修復版 v2.2</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -209,20 +209,20 @@
     <div class="container">
         <div class="header">
             <h1>🎓 學員管理系統</h1>
-            <p>Vercel + Google Sheets 版本</p>
+            <p>修復版 - 簡化班別管理</p>
             <div style="margin-top: 20px;">
-                <span style="font-size: 16px;">伺服器狀態:</span>
-                <span class="status-indicator status-offline" id="serverStatus"></span>
-                <span id="statusText" style="font-weight: 600;">檢測中...</span>
+                <span style="font-size: 16px;">系統狀態:</span>
+                <span class="status-indicator status-online" id="serverStatus"></span>
+                <span id="statusText" style="font-weight: 600;">正常運行</span>
             </div>
-                </div>
+        </div>
 
         <!-- 標籤頁導航 -->
         <div class="tabs">
             <button class="tab active" onclick="showTab('students', this)">👥 新增學員</button>
             <button class="tab" onclick="showTab('attendance', this)">✅ 點名系統</button>
             <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
-                </div>
+        </div>
 
         <!-- 學員管理標籤 -->
         <div id="studentsTab" class="tab-content active">
@@ -232,22 +232,22 @@
                     <div class="form-group">
                         <label>學員姓名 *</label>
                         <input type="text" id="studentName" placeholder="請輸入學員姓名" required>
-                </div>
+                    </div>
                     <div class="form-group">
                         <label>別名/英文名</label>
                         <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
-                </div>
+                    </div>
                     <div class="form-group">
-                        <label>班別</label>
-                        <select id="studentClass">
-                            <option value="">請選擇班別</option>
-                            <!-- 班別選項將從 Google Sheets 動態載入 -->
-                        </select>
+                        <label>班別 *</label>
+                        <input type="text" id="studentClass" placeholder="請輸入班別名稱" list="classDatalist" required>
+                        <datalist id="classDatalist">
+                            <!-- 班別選項會動態載入 -->
+                        </datalist>
                     </div>
                     <div class="form-group">
                         <label>聯絡電話</label>
                         <input type="tel" id="studentPhone" placeholder="聯絡電話">
-                        </div>
+                    </div>
                     <div class="form-group">
                         <label>電子信箱</label>
                         <input type="email" id="studentEmail" placeholder="電子信箱">
@@ -271,7 +271,7 @@
                     <button class="btn btn-primary" onclick="loadStudents()">🔄 重新載入</button>
                     <button class="btn btn-warning" onclick="clearForm()">🧹 清空表單</button>
                 </div>
-                </div>
+            </div>
 
             <div class="card">
                 <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
@@ -297,7 +297,7 @@
                         <label>班別 *</label>
                         <select id="attendanceClass" required onchange="loadStudentsForAttendance()">
                             <option value="">請選擇班別</option>
-                            <!-- 班別選項將從 Google Sheets 動態載入 -->
+                            <!-- 班別選項將從學員資料中動態載入 -->
                         </select>
                     </div>
                 </div>
@@ -305,7 +305,7 @@
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
                 </div>
-                </div>
+            </div>
 
             <!-- 點名列表 -->
             <div class="card" id="attendanceListCard" style="display: none;">
@@ -327,7 +327,7 @@
                     </div>
                 </div>
             </div>
-                </div>
+        </div>
 
         <!-- 雲端同步標籤 -->
         <div id="syncTab" class="tab-content">
@@ -358,45 +358,11 @@
 
                 <div style="margin-top: 40px; padding: 25px; background: rgba(248,249,250,0.8); border-radius: 15px;">
                     <h4 style="color: #333; margin-bottom: 15px; font-size: 18px;">📋 同步狀態</h4>
-                    <p id="syncStatus" style="color: #666; font-size: 16px;">尚未進行同步操作</p>
+                    <p id="syncStatus" style="color: #666; font-size: 16px;">系統已啟動，準備就緒</p>
                 </div>
             </div>
         </div>
-
-        <!-- 統計報表標籤 -->
-        <div id="statsTab" class="tab-content">
-            <div class="card">
-                <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">📊 統計報表</h3>
-                <div class="stats-grid">
-                    <div class="stat-card" style="border-left-color: #007bff;">
-                        <h4 style="color: #007bff; margin-bottom: 15px; font-size: 18px;">總學員數</h4>
-                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="totalStudents">0</p>
-                        <small style="color: #666;">全部學員</small>
-                    </div>
-                    <div class="stat-card" style="border-left-color: #28a745;">
-                        <h4 style="color: #28a745; margin-bottom: 15px; font-size: 18px;">在讀學員</h4>
-                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="activeStudents">0</p>
-                        <small style="color: #666;">目前就讀</small>
-                    </div>
-                    <div class="stat-card" style="border-left-color: #ffc107;">
-                        <h4 style="color: #f39c12; margin-bottom: 15px; font-size: 18px;">休學學員</h4>
-                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="suspendedStudents">0</p>
-                        <small style="color: #666;">暫時休學</small>
-                    </div>
-                    <div class="stat-card" style="border-left-color: #6c757d;">
-                        <h4 style="color: #6c757d; margin-bottom: 15px; font-size: 18px;">畢業學員</h4>
-                        <p style="font-size: 48px; font-weight: bold; margin: 15px 0; color: #333;" id="graduatedStudents">0</p>
-                        <small style="color: #666;">已經畢業</small>
-                    </div>
-                </div>
-                
-                <div style="margin-top: 40px; text-align: center;">
-                    <button class="btn btn-primary" onclick="updateStatistics()">🔄 更新統計</button>
-                    <button class="btn btn-success" onclick="exportStudentList()">📄 匯出學員清單</button>
-                </div>
-            </div>
-                        </div>
-                        </div>
+    </div>
 
     <!-- 通知元素 -->
     <div id="notification" class="notification"></div>
@@ -412,9 +378,9 @@
         document.addEventListener('DOMContentLoaded', async () => {
             console.log('🚀 學員管理系統啟動中...');
             showNotification('歡迎使用學員管理系統！', 'success');
-            await checkServerStatus();
+            
             await loadStudents();
-            await loadClasses(); // 載入班別選項
+            updateClassOptions(); // 從學員資料中更新班別選項
             await loadFromCloudSilently();
             
             // 設定預設日期為今天
@@ -425,46 +391,6 @@
             
             loadTodayAttendance();
         });
-
-        // 檢查伺服器狀態
-        async function checkServerStatus() {
-            console.log('🔍 開始檢查伺服器狀態...');
-            
-            try {
-                document.getElementById('statusText').textContent = '檢測中...';
-                
-                // 使用絕對路徑確保正確訪問
-                const apiUrl = window.location.origin + '/api/get-students';
-                console.log('📡 API URL:', apiUrl);
-                
-                const response = await fetch(apiUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                });
-                
-                console.log('📡 Response status:', response.status);
-                
-                if (response.ok) {
-                    const result = await response.json();
-                    console.log('✅ API 響應:', result);
-                    
-                    document.getElementById('serverStatus').className = 'status-indicator status-online';
-                    document.getElementById('statusText').textContent = '線上';
-                    console.log('✅ API 伺服器連線正常');
-                    showNotification('雲端服務已連接', 'success');
-                } else {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-            } catch (error) {
-                console.error('❌ API 連接失敗:', error);
-                document.getElementById('serverStatus').className = 'status-indicator status-offline';
-                document.getElementById('statusText').textContent = '離線';
-                console.log('⚠️ API 伺服器離線，使用本地模式');
-                showNotification('使用本地模式（雲端功能暫不可用）', 'warning');
-            }
-        }
 
         // 標籤頁切換
         function showTab(tabName, element) {
@@ -494,8 +420,15 @@
         // 新增學員
         async function addStudent() {
             const name = document.getElementById('studentName').value.trim();
+            const className = document.getElementById('studentClass').value.trim();
+            
             if (!name) {
                 showNotification('請輸入學員姓名', 'error');
+                return;
+            }
+            
+            if (!className) {
+                showNotification('請輸入班別名稱', 'error');
                 return;
             }
 
@@ -503,7 +436,7 @@
                 id: Date.now().toString(),
                 name: name,
                 nickname: document.getElementById('studentNickname').value.trim(),
-                class: document.getElementById('studentClass').value,
+                class: className,
                 phone: document.getElementById('studentPhone').value.trim(),
                 email: document.getElementById('studentEmail').value.trim(),
                 status: document.getElementById('studentStatus').value,
@@ -516,8 +449,9 @@
             
             clearForm();
             displayStudents();
+            updateClassOptions(); // 更新班別選項
             updateStatistics();
-            showNotification(`✅ 學員「${name}」已成功新增`, 'success');
+            showNotification(`✅ 學員「${name}」已成功新增到「${className}」`, 'success');
             
             setTimeout(() => {
                 syncToCloudSilently();
@@ -551,6 +485,7 @@
             }
             
             displayStudents();
+            updateClassOptions();
             updateStatistics();
         }
 
@@ -564,7 +499,7 @@
                         <h3>📚 還沒有學員資料</h3>
                         <p>點擊上方的「新增學員」按鈕開始建立你的學員名冊<br>
                         所有資料會安全地儲存在你的瀏覽器中</p>
-                        </div>
+                    </div>
                 `;
                 return;
             }
@@ -589,13 +524,13 @@
                             ${student.phone ? ` | 📞 ${student.phone}` : ''}
                             ${student.email ? ` | 📧 ${student.email}` : ''}
                         </div>
-                        </div>
+                    </div>
                     <div>
                         <button class="btn btn-danger" onclick="deleteStudent('${student.id}')" 
                                 title="刪除學員" style="padding: 10px 15px;">
                             🗑️
                         </button>
-                </div>
+                    </div>
                 </div>
             `).join('');
         }
@@ -620,9 +555,35 @@
                 students = students.filter(s => s.id !== id);
                 localStorage.setItem('studentData', JSON.stringify(students));
                 displayStudents();
+                updateClassOptions(); // 更新班別選項
                 updateStatistics();
                 showNotification(`🗑️ 學員「${student.name}」已刪除`, 'warning');
             }
+        }
+
+        // 更新班別選項 - 從現有學員資料中提取
+        function updateClassOptions() {
+            // 從學員資料中提取所有班別
+            const classNames = [...new Set(students.map(s => s.class).filter(c => c && c.trim()))];
+            
+            // 更新新增學員的 datalist
+            const datalist = document.getElementById('classDatalist');
+            datalist.innerHTML = classNames.map(className => `<option value="${className}">`).join('');
+            
+            // 更新點名系統的 select
+            const attendanceSelect = document.getElementById('attendanceClass');
+            if (attendanceSelect) {
+                const currentValue = attendanceSelect.value;
+                attendanceSelect.innerHTML = '<option value="">請選擇班別</option>' +
+                    classNames.map(className => `<option value="${className}">${className}</option>`).join('');
+                
+                // 恢復之前選擇的值
+                if (currentValue && classNames.includes(currentValue)) {
+                    attendanceSelect.value = currentValue;
+                }
+            }
+            
+            console.log(`📚 更新班別選項: ${classNames.join(', ')}`);
         }
 
         // 同步到雲端
@@ -636,7 +597,11 @@
                 showNotification('正在同步到雲端...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
                 
-                const response = await fetch(window.location.origin + '/api/sync-students', {
+                // 檢查是否為 Vercel 部署版本
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/sync-students' : window.location.origin + '/api/sync-students';
+                
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ students })
@@ -661,7 +626,10 @@
         async function syncToCloudSilently() {
             if (students.length === 0) return;
             try {
-                await fetch(window.location.origin + '/api/sync-students', {
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/sync-students' : window.location.origin + '/api/sync-students';
+                
+                await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ students })
@@ -678,13 +646,17 @@
                 showNotification('正在從雲端載入...', 'warning');
                 document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入資料...';
                 
-                const response = await fetch(window.location.origin + '/api/get-students');
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/get-students' : window.location.origin + '/api/get-students';
+                
+                const response = await fetch(apiUrl);
                 const result = await response.json();
                 
                 if (result.success && result.students) {
                     students = result.students;
                     localStorage.setItem('studentData', JSON.stringify(students));
                     displayStudents();
+                    updateClassOptions();
                     updateStatistics();
                     showNotification(`✅ 成功載入 ${result.count} 筆學員資料`, 'success');
                     document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 筆資料 (${new Date().toLocaleString('zh-TW')})`;
@@ -701,7 +673,10 @@
         // 靜默從雲端載入
         async function loadFromCloudSilently() {
             try {
-                const response = await fetch(window.location.origin + '/api/get-students');
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/get-students' : window.location.origin + '/api/get-students';
+                
+                const response = await fetch(apiUrl);
                 const result = await response.json();
                 
                 if (result.success && result.students && result.students.length > 0) {
@@ -709,6 +684,7 @@
                         students = result.students;
                         localStorage.setItem('studentData', JSON.stringify(students));
                         displayStudents();
+                        updateClassOptions();
                         console.log(`🔄 自動載入 ${result.count} 筆雲端學員資料`);
                     }
                 }
@@ -724,218 +700,13 @@
             const suspended = students.filter(s => s.status === '休學').length;
             const graduated = students.filter(s => s.status === '畢業').length;
 
-            document.getElementById('totalStudents').textContent = total;
-            document.getElementById('activeStudents').textContent = active;
-            document.getElementById('suspendedStudents').textContent = suspended;
-            document.getElementById('graduatedStudents').textContent = graduated;
-        }
-
-        // 匯出學員清單
-        function exportStudentList() {
-            if (students.length === 0) {
-                showNotification('沒有學員資料可匯出', 'warning');
-                return;
-            }
-
-            const csvContent = "data:text/csv;charset=utf-8," 
-                + "學員姓名,別名,班別,電話,信箱,狀態,建立日期,備註\n"
-                + students.map(student => 
-                    `"${student.name}","${student.nickname || ''}","${student.class || ''}","${student.phone || ''}","${student.email || ''}","${student.status}","${student.createdAt}","${student.remarks || ''}"`
-                ).join("\n");
-
-            const encodedUri = encodeURI(csvContent);
-            const link = document.createElement("a");
-            link.setAttribute("href", encodedUri);
-            link.setAttribute("download", `學員清單_${new Date().toLocaleDateString('zh-TW').replace(/\//g, '-')}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
-        }
-
-        // 載入班別資料
-        async function loadClasses() {
-            try {
-                showNotification('正在載入班別資料...', 'warning');
-                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入班別資料...';
-                
-                const response = await fetch(window.location.origin + '/api/get-classes');
-                const result = await response.json();
-                
-                if (result.success && result.classes) {
-                    updateClassOptions(result.classes);
-                    showNotification(`✅ 成功載入 ${result.count} 個班別`, 'success');
-                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 個班別 (${new Date().toLocaleString('zh-TW')})`;
-                } else if (result.error === 'Missing Google Apps Script URL configuration') {
-                    showNotification('⚠️ 請先設定 Google Apps Script URL', 'warning');
-                    document.getElementById('syncStatus').textContent = '⚠️ 請先設定 Google Apps Script URL';
-                } else if (result.error === 'Invalid action') {
-                    showNotification('⚠️ 請更新 Google Apps Script 代碼以支援班別載入功能', 'warning');
-                    document.getElementById('syncStatus').textContent = '⚠️ 請更新 Google Apps Script 代碼以支援 getClasses 功能';
-                } else {
-                    throw new Error(result.error || '載入班別失敗');
-                }
-            } catch (error) {
-                console.error('載入班別失敗:', error);
-                showNotification('❌ 載入班別失敗，請檢查 Google Apps Script 設定', 'error');
-                document.getElementById('syncStatus').textContent = `❌ 載入班別失敗: ${error.message}`;
-            }
-        }
-
-
-
-        // 更新班別選項
-        function updateClassOptions(classNames) {
-            const selects = [
-                document.getElementById('studentClass'),
-                document.getElementById('attendanceClass')
-            ];
-            
-            selects.forEach(select => {
-                if (select) {
-                    select.innerHTML = '<option value="">請選擇班別</option>';
-                    
-                    classNames.forEach(className => {
-                        if (className && className.trim()) {
-                            const option = document.createElement('option');
-                            option.value = className.trim();
-                            option.textContent = className.trim();
-                            select.appendChild(option);
-                        }
-                    });
-                }
-            });
-        }
-
-
-
-        // 載入課堂資料
-        async function loadSchedule() {
-            try {
-                showNotification('正在載入課堂資料...', 'warning');
-                document.getElementById('syncStatus').textContent = '正在從 Google Sheets 載入課堂資料...';
-                
-                const response = await fetch(window.location.origin + '/api/get-schedule');
-                const result = await response.json();
-                
-                if (result.success && result.schedule) {
-                    classes = result.schedule;
-                    localStorage.setItem('classesData', JSON.stringify(classes));
-                    displayClasses();
-                    console.log('📅 課堂資料:', result.schedule);
-                    showNotification(`✅ 成功載入 ${result.count} 堂課程`, 'success');
-                    document.getElementById('syncStatus').textContent = `✅ 成功載入 ${result.count} 堂課程 (${new Date().toLocaleString('zh-TW')})`;
-                } else {
-                    throw new Error(result.error || '載入課堂資料失敗');
-                }
-            } catch (error) {
-                console.error('載入課堂資料失敗:', error);
-                showNotification('❌ 載入課堂資料失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = `❌ 載入課堂資料失敗: ${error.message}`;
-            }
-        }
-
-        // 新增班組
-        function addClass() {
-            const id = document.getElementById('classId').value.trim();
-            const name = document.getElementById('className').value.trim();
-            const startTime = document.getElementById('classStartTime').value;
-            const endTime = document.getElementById('classEndTime').value;
-            const weekday = document.getElementById('classWeekday').value;
-            const description = document.getElementById('classDescription').value.trim();
-
-            if (!name) {
-                showNotification('請填寫班組名稱', 'error');
-                return;
-            }
-
-            const newClass = {
-                id: id || 'CLASS_' + Date.now(),
-                name: name,
-                startTime: startTime,
-                endTime: endTime,
-                weekday: weekday,
-                description: description,
-                createdAt: new Date().toLocaleString('zh-TW')
-            };
-
-            classes.push(newClass);
-            localStorage.setItem('classesData', JSON.stringify(classes));
-            displayClasses();
-            clearClassForm();
-            showNotification(`✅ 班組「${name}」新增成功`, 'success');
-        }
-
-        // 顯示班組列表
-        function displayClasses() {
-            const list = document.getElementById('classesList');
-            
-            if (classes.length === 0) {
-                list.innerHTML = `
-                    <div class="empty-state">
-                        <h3>📚 還沒有班組資料</h3>
-                        <p>點擊上方的「新增班組」按鈕開始建立你的班組資料</p>
-                </div>
-                `;
-                return;
-            }
-
-            list.innerHTML = classes.map(cls => `
-                <div class="student-item">
-                    <div>
-                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
-                            ${cls.name}
-                            ${cls.id ? `<span style="color: #666; font-weight: 400; font-size: 14px;">(${cls.id})</span>` : ''}
-                        </div>
-                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
-                            ${cls.startTime && cls.endTime ? `⏰ ${cls.startTime} - ${cls.endTime}` : ''}
-                            ${cls.weekday ? ` | 📅 星期${cls.weekday}` : ''}
-                        </div>
-                        <div style="color: #999; font-size: 13px;">
-                            ${cls.description ? `📝 ${cls.description}` : ''}
-                            ${cls.createdAt ? ` | 📅 ${cls.createdAt} 建立` : ''}
-                        </div>
-                    </div>
-                    <div>
-                        <button class="btn btn-danger" onclick="deleteClass('${cls.id}')" 
-                                title="刪除班組" style="padding: 10px 15px;">
-                            🗑️
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // 刪除班組
-        function deleteClass(id) {
-            const cls = classes.find(c => c.id === id);
-            if (!cls) return;
-            
-            if (confirm(`⚠️ 確定要刪除班組「${cls.name}」嗎？\n\n此操作無法復原，請謹慎考慮。`)) {
-                classes = classes.filter(c => c.id !== id);
-                localStorage.setItem('classesData', JSON.stringify(classes));
-                displayClasses();
-                showNotification(`🗑️ 班組「${cls.name}」已刪除`, 'warning');
-            }
-        }
-
-        // 清空班組表單
-        function clearClassForm() {
-            document.getElementById('classId').value = '';
-            document.getElementById('className').value = '';
-            document.getElementById('classStartTime').value = '';
-            document.getElementById('classEndTime').value = '';
-            document.getElementById('classWeekday').value = '';
-            document.getElementById('classDescription').value = '';
-        }
-
-        // 載入班組資料
-        function loadClassesData() {
-            const saved = localStorage.getItem('classesData');
-            if (saved) {
-                classes = JSON.parse(saved);
-                displayClasses();
+            // 如果有統計元素才更新
+            const totalElement = document.getElementById('totalStudents');
+            if (totalElement) {
+                totalElement.textContent = total;
+                document.getElementById('activeStudents').textContent = active;
+                document.getElementById('suspendedStudents').textContent = suspended;
+                document.getElementById('graduatedStudents').textContent = graduated;
             }
         }
 
@@ -995,14 +766,14 @@
                                 style="padding: 10px 20px; font-size: 16px; border: none; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
                             ⏰ 遲到
                         </button>
-                        </div>
+                    </div>
                 </div>
             `).join('');
         }
         
         // 標記出席狀態
         function markAttendance(studentId, status) {
-            console.log('markAttendance 被呼叫:', studentId, status); // 除錯用
+            console.log('markAttendance 被呼叫:', studentId, status);
             const student = students.find(s => s.id === studentId);
             if (!student) {
                 console.error('找不到學員:', studentId);
@@ -1025,7 +796,7 @@
                 createdAt: new Date().toLocaleString('zh-TW')
             });
             
-            // 更新按鈕狀態 - 使用新的 data 屬性
+            // 更新按鈕狀態
             const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
             studentButtons.forEach(btn => {
                 btn.classList.remove('active');
@@ -1041,9 +812,6 @@
                 clickedButton.style.transform = 'scale(0.95)';
                 clickedButton.style.border = '2px solid #fff';
                 clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
-                console.log('按鈕樣式已更新:', clickedButton); // 除錯用
-            } else {
-                console.error('找不到點擊的按鈕:', studentId, status); // 除錯用
             }
             
             showNotification(`${student.name} 標記為 ${status}`, 'success');
@@ -1051,9 +819,7 @@
 
         // 設置點名按鈕事件監聽器
         function setupAttendanceButtons() {
-            // 移除舊的事件監聽器
             document.removeEventListener('click', attendanceClickHandler);
-            // 添加新的事件監聽器
             document.addEventListener('click', attendanceClickHandler);
         }
 
@@ -1065,7 +831,6 @@
                 const studentId = event.target.getAttribute('data-student-id');
                 const status = event.target.getAttribute('data-status');
                 if (studentId && status) {
-                    console.log('點名按鈕被點擊:', studentId, status); // 除錯用
                     markAttendance(studentId, status);
                 }
             }
@@ -1098,7 +863,10 @@
                     };
                 });
                 
-                const response = await fetch(window.location.origin + '/api/sync-attendance', {
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/sync-attendance' : window.location.origin + '/api/sync-attendance';
+                
+                const response = await fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1187,20 +955,20 @@
                                         <span style="color: ${getAttendanceColor(att.status)}; font-weight: 600; margin-left: 10px;">
                                             ${getAttendanceIcon(att.status)} ${att.status}
                                         </span>
-                </div>
+                                    </div>
                                     <div style="color: #999; font-size: 13px;">
                                         📝 ${att.createdAt}
-            </div>
-        </div>
+                                    </div>
+                                </div>
                                 <div>
                                     <button class="btn btn-danger" onclick="deleteAttendance('${att.id}')" 
                                             title="刪除記錄" style="padding: 8px 12px; font-size: 12px;">
                                         🗑️
                                     </button>
-            </div>
-        </div>
+                                </div>
+                            </div>
                         `).join('')}
-    </div>
+                    </div>
                 `;
             });
             
@@ -1243,4 +1011,4 @@
         }
     </script>
 </body>
-</html> 
+</html>
