@@ -728,21 +728,34 @@
             const date = document.getElementById('attendanceDate').value;
             const className = document.getElementById('attendanceClass').value;
             
+            console.log('=== 開始點名 ===');
+            console.log('選擇日期:', date);
+            console.log('選擇班別:', className);
+            
             if (!date || !className) {
                 showNotification('請選擇日期和班別', 'error');
+                console.log('❌ 日期或班別未選擇');
                 return;
             }
             
             currentAttendanceDate = date;
             currentAttendanceClass = className;
             
+            console.log('✅ 設定全域變數:');
+            console.log('- currentAttendanceDate:', currentAttendanceDate);
+            console.log('- currentAttendanceClass:', currentAttendanceClass);
+            
             // 獲取該班別的學員
             const classStudents = students.filter(s => s.class === className);
+            console.log(`📚 ${className} 的學員:`, classStudents);
             
             if (classStudents.length === 0) {
                 showNotification(`${className} 沒有學員資料`, 'warning');
+                console.log('❌ 該班別沒有學員');
                 return;
             }
+            
+            console.log(`✅ 找到 ${classStudents.length} 位學員`);
             
             // 顯示點名列表
             displayAttendanceList(classStudents);
@@ -752,6 +765,7 @@
             setupAttendanceButtons();
             
             showNotification(`開始 ${className} 的點名`, 'success');
+            console.log('✅ 點名列表已顯示');
         }
         
         // 顯示點名列表
@@ -786,20 +800,33 @@
         
         // 標記出席狀態
         function markAttendance(studentId, status) {
-            console.log('markAttendance 被呼叫:', studentId, status);
+            console.log('=== 標記出席狀態 ===');
+            console.log('學員ID:', studentId);
+            console.log('狀態:', status);
+            console.log('當前日期:', currentAttendanceDate);
+            console.log('當前班別:', currentAttendanceClass);
+            
             const student = students.find(s => s.id === studentId);
             if (!student) {
-                console.error('找不到學員:', studentId);
+                console.error('❌ 找不到學員:', studentId);
+                showNotification('找不到學員資料', 'error');
                 return;
             }
             
+            console.log('✅ 找到學員:', student.name);
+            
             // 移除該學員的舊記錄
+            const originalLength = todayAttendance.length;
             todayAttendance = todayAttendance.filter(att => 
                 !(att.studentId === studentId && att.date === currentAttendanceDate && att.className === currentAttendanceClass)
             );
             
+            if (todayAttendance.length < originalLength) {
+                console.log(`🗑️ 移除了 ${originalLength - todayAttendance.length} 筆舊記錄`);
+            }
+            
             // 添加新記錄
-            todayAttendance.push({
+            const newRecord = {
                 id: 'ATT_' + Date.now(),
                 date: currentAttendanceDate,
                 className: currentAttendanceClass,
@@ -807,15 +834,22 @@
                 studentName: student.name,
                 status: status,
                 createdAt: new Date().toLocaleString('zh-TW')
-            });
+            };
+            
+            todayAttendance.push(newRecord);
+            console.log('✅ 新增記錄:', newRecord);
+            console.log('目前總記錄數:', todayAttendance.length);
             
             // 更新按鈕狀態
             const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
+            console.log(`找到 ${studentButtons.length} 個按鈕需要更新`);
+            
             studentButtons.forEach(btn => {
                 btn.classList.remove('active');
                 btn.style.opacity = '1';
                 btn.style.transform = 'scale(1)';
                 btn.style.border = '2px solid transparent';
+                btn.style.boxShadow = 'none';
             });
             
             const clickedButton = document.querySelector(`button[data-student-id="${studentId}"][data-status="${status}"]`);
@@ -825,6 +859,9 @@
                 clickedButton.style.transform = 'scale(0.95)';
                 clickedButton.style.border = '2px solid #fff';
                 clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
+                console.log('✅ 按鈕樣式已更新');
+            } else {
+                console.error('❌ 找不到點擊的按鈕:', studentId, status);
             }
             
             showNotification(`${student.name} 標記為 ${status}`, 'success');
@@ -851,24 +888,41 @@
         
         // 儲存點名記錄
         async function saveAttendance() {
+            console.log('=== 開始儲存點名記錄 ===');
+            console.log('當前點名記錄:', todayAttendance);
+            console.log('記錄數量:', todayAttendance.length);
+            
             if (todayAttendance.length === 0) {
-                showNotification('沒有點名記錄可儲存', 'warning');
+                showNotification('請先為學員標記出席狀態', 'warning');
+                console.log('❌ 沒有點名記錄，停止儲存');
                 return;
             }
             
-            // 儲存到本地
-            localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
-            displayTodayAttendance();
-            updateAttendanceCount();
-            
-            // 簡化版：只提示本地儲存成功，暫時不同步到雲端
-            showNotification(`✅ 已本地儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
-            
-            // 隱藏點名列表
-            document.getElementById('attendanceListCard').style.display = 'none';
-            
-            // 如果用戶需要同步到Google Sheets，可以稍後在雲端同步頁面手動同步
-            console.log('點名記錄已儲存到本地，如需同步請使用雲端同步功能');
+            try {
+                // 儲存到本地
+                localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
+                console.log('✅ 已儲存到 localStorage');
+                
+                // 驗證儲存是否成功
+                const savedData = localStorage.getItem('todayAttendance');
+                const parsedData = JSON.parse(savedData);
+                console.log('✅ 驗證儲存成功，記錄數:', parsedData.length);
+                
+                // 更新顯示
+                displayTodayAttendance();
+                updateAttendanceCount();
+                
+                // 顯示成功訊息
+                showNotification(`✅ 已本地儲存 ${todayAttendance.length} 筆點名記錄`, 'success');
+                console.log(`✅ 儲存完成，共 ${todayAttendance.length} 筆記錄`);
+                
+                // 隱藏點名列表
+                document.getElementById('attendanceListCard').style.display = 'none';
+                
+            } catch (error) {
+                console.error('❌ 儲存失敗:', error);
+                showNotification('❌ 儲存失敗: ' + error.message, 'error');
+            }
         }
         
         // 重新點名
