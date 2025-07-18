@@ -1051,7 +1051,7 @@
             let recordsText = '📋 本地點名記錄：\n\n';
             todayAttendance.forEach(record => {
                 recordsText += `📅 ${record.date} | 📚 ${record.className}\n`;
-                recordsText += `👤 ${record.studentName} - ${record.status}\n`;
+                recordsText += `👤 ${record.studentName} (ID: ${record.studentId}) - ${record.status}\n`;
                 recordsText += `⏰ ${record.createdAt}\n\n`;
             });
             
@@ -1065,18 +1065,18 @@
                 return;
             }
             
-            // 簡化處理：提示用戶手動輸入到Google Sheets
+            // 按照正確格式準備資料：日期 | 班別 | 學員ID | 學員姓名 | 出席狀態
             const recordsForCopy = todayAttendance.map(record => 
-                `${record.date}\t${record.className}\t${record.studentName}\t${record.status}`
+                `${record.date}\t${record.className}\t${record.studentId}\t${record.studentName}\t${record.status}`
             ).join('\n');
             
-            const header = 'date\tclass\tstudentName\tstatus\n';
+            const header = '日期\t班別\t學員ID\t學員姓名\t出席狀態\n';
             const fullData = header + recordsForCopy;
             
             // 複製到剪貼板
             navigator.clipboard.writeText(fullData).then(() => {
                 showNotification(`✅ 已複製 ${todayAttendance.length} 筆記錄到剪貼板，可直接貼到Google Sheets`, 'success');
-                alert(`📋 點名記錄已複製到剪貼板！\n\n請到您的Google Sheets手動貼上：\n1. 開啟您的Google Sheets\n2. 選擇「attendance」工作表\n3. 按Ctrl+V貼上資料\n\n記錄格式：日期 | 班別 | 學員姓名 | 狀態`);
+                alert(`📋 點名記錄已複製到剪貼板！\n\n請到您的Google Sheets手動貼上：\n1. 開啟您的Google Sheets\n2. 選擇「attendance」工作表\n3. 按Ctrl+V貼上資料\n\n記錄格式：日期 | 班別 | 學員ID | 學員姓名 | 出席狀態`);
             }).catch(() => {
                 // 如果複製失敗，顯示資料讓用戶手動複製
                 const textarea = document.createElement('textarea');
@@ -1181,9 +1181,9 @@
                 todayAttendance = todayAttendance.filter(a => a.id !== id);
                 localStorage.setItem('todayAttendance', JSON.stringify(todayAttendance));
                 displayTodayAttendance();
-                showNotification(`🗑️ 已刪除點名記錄`, 'warning');
+                showNotification('🗑️ 已刪除點名記錄', 'warning');
             }
         }
     </script>
 </body>
-</html> 
+</html>
