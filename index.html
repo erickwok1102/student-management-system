@@ -260,10 +260,10 @@
                     </div>
                     <div class="form-group">
                         <label>班別 *</label>
-                        <input type="text" id="studentClass" placeholder="請輸入班別名稱" list="classDatalist" required>
-                        <datalist id="classDatalist">
+                        <select id="studentClass" required>
+                            <option value="">請選擇班別</option>
                             <!-- 班別選項會動態載入 -->
-                        </datalist>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>聯絡電話</label>
@@ -275,7 +275,7 @@
                     </div>
                     <div class="form-group">
                         <label>生日</label>
-                        <input type="date" id="studentBirthday" placeholder="選擇生日日期">
+                        <input type="date" id="studentBirthday" placeholder="選擇生日日期" onchange="handleBirthdayInput()">
                     </div>
                     <div class="form-group">
                         <label>緊急聯絡人</label>
@@ -433,6 +433,13 @@
             updateClassOptions(); // 從學員資料中更新班別選項
             await loadFromCloudSilently();
             
+            // 自動從課程表載入班別
+            try {
+                await loadClassesFromSchedule();
+            } catch (error) {
+                console.log('📅 自動載入課程表班別失敗，將使用學員資料中的班別');
+            }
+            
             // 設定預設日期為今天
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
             
@@ -500,13 +507,14 @@
             return `${year}-${month}-${day}`;
         }
 
-        // 格式化生日日期顯示
+        // 格式化生日日期顯示 (只顯示月-日)
         function formatBirthday(dateString) {
             if (!dateString) return '';
             const date = new Date(dateString);
-            const month = (date.getMonth() + 1).toString().padStart(2, '0');
-            const day = date.getDate().toString().padStart(2, '0');
-            return `${day}-${month.substring(1)}-${date.getDate() < 10 ? date.getDate() : ''}`;
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            return `${day}-${month}`;
         }
 
         // 新增學員
@@ -534,7 +542,7 @@
                 class: className,
                 phone: document.getElementById('studentPhone').value.trim(),
                 email: document.getElementById('studentEmail').value.trim(),
-                birthday: document.getElementById('studentBirthday').value,
+                birthday: formatBirthday(document.getElementById('studentBirthday').value),
                 emergencyContact: document.getElementById('emergencyContact').value.trim(),
                 emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
                 status: document.getElementById('studentStatus').value,
@@ -560,7 +568,7 @@
         function clearForm() {
             document.getElementById('studentName').value = '';
             document.getElementById('studentNickname').value = '';
-            document.getElementById('studentClass').value = '';
+            document.getElementById('studentClass').value = ''; // 重置為預設選項
             document.getElementById('studentPhone').value = '';
             document.getElementById('studentEmail').value = '';
             document.getElementById('studentBirthday').value = '';
@@ -625,7 +633,7 @@
                             📅 ${student.createdAt} 建立
                             ${student.phone ? ` | 📞 ${student.phone}` : ''}
                             ${student.email ? ` | 📧 ${student.email}` : ''}
-                            ${student.birthday ? ` | 🎂 ${student.birthday}` : ''}
+                            ${student.birthday ? ` | 🎂 ${formatBirthday(student.birthday)}` : ''}
                         </div>
                         ${student.emergencyContact || student.emergencyPhone ? `
                             <div style="color: #e74c3c; font-size: 12px; margin-top: 4px;">
@@ -674,11 +682,20 @@
             // 從學員資料中提取所有班別
             const classNames = [...new Set(students.map(s => s.class).filter(c => c && c.trim()))];
             
-            // 更新新增學員的 datalist
-            const datalist = document.getElementById('classDatalist');
-            datalist.innerHTML = classNames.map(className => `<option value="${className}">`).join('');
+            // 更新新增學員的 select
+            const selectElement = document.getElementById('studentClass');
+            if (selectElement) {
+                const currentValue = selectElement.value;
+                selectElement.innerHTML = '<option value="">請選擇班別</option>' +
+                    classNames.map(className => `<option value="${className}">${className}</option>`).join('');
+                
+                // 恢復之前選擇的值
+                if (currentValue && classNames.includes(currentValue)) {
+                    selectElement.value = currentValue;
+                }
+            }
             
-            // 更新點名系統的 select
+            // 更新點名系統的 select (如果存在)
             const attendanceSelect = document.getElementById('attendanceClass');
             if (attendanceSelect) {
                 const currentValue = attendanceSelect.value;
@@ -694,39 +711,130 @@
             console.log(`📚 更新班別選項: ${classNames.join(', ')}`);
         }
 
+        // 從課程表載入班別
+        async function loadClassesFromSchedule() {
+            try {
+                showNotification('正在從課程表載入班別...', 'warning');
+                
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getSchedule', {
+                    method: 'GET',
+                    redirect: 'follow'
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const result = await response.json();
+                console.log('📅 課程表回應:', result);
+
+                if (result.success && result.schedule) {
+                    const classSelect = document.getElementById('studentClass');
+                    const attendanceClassSelect = document.getElementById('attendanceClass');
+                    
+                    // 清空現有選項
+                    classSelect.innerHTML = '<option value="">請選擇班別</option>';
+                    if (attendanceClassSelect) {
+                        attendanceClassSelect.innerHTML = '<option value="">請選擇班別</option>';
+                    }
+
+                    // 從課程表中提取唯一的班別 (主要從 class_id 欄位)
+                    const classes = new Set();
+                    
+                    result.schedule.forEach(scheduleItem => {
+                        // 優先檢查 class_id 欄位，然後是其他可能的班別欄位
+                        const possibleFields = ['class_id', 'name', 'className', 'class', '班別', 'Class', 'class_name'];
+                        
+                        for (const field of possibleFields) {
+                            if (scheduleItem[field] && typeof scheduleItem[field] === 'string') {
+                                const className = scheduleItem[field].trim();
+                                if (className && className !== '') {
+                                    classes.add(className);
+                                    console.log(`📋 從 ${field} 欄位找到班別: ${className}`);
+                                    break; // 找到後跳出循環
+                                }
+                            }
+                        }
+                    });
+
+                    // 添加班別選項
+                    classes.forEach(className => {
+                        const option = new Option(className, className);
+                        classSelect.appendChild(option.cloneNode(true));
+                        
+                        if (attendanceClassSelect) {
+                            attendanceClassSelect.appendChild(option);
+                        }
+                    });
+
+                    if (classes.size > 0) {
+                        showNotification(`✅ 成功載入 ${classes.size} 個班別`, 'success');
+                    } else {
+                        showNotification('⚠️ 課程表中沒有找到班別資訊', 'warning');
+                    }
+                } else {
+                    throw new Error(result.message || '載入課程表失敗');
+                }
+            } catch (error) {
+                console.error('載入課程表錯誤:', error);
+                showNotification(`❌ 載入課程表失敗: ${error.message}`, 'error');
+            }
+        }
+
         // 同步到雲端
         async function syncToCloud() {
             if (students.length === 0) {
-                showNotification('沒有學員資料可同步', 'warning');
+                showNotification('沒有學員資料需要同步', 'warning');
                 return;
             }
 
+            showNotification('🔄 正在同步到雲端...', 'info');
+
+            // 準備學員資料
+            const data = students.map(student => ({
+                id: student.id || '',
+                name: student.name || '',
+                nickname: student.nickname || '',
+                class: student.class || '',
+                phone: student.phone || '',
+                email: student.email || '',
+                birthday: student.birthday || '',
+                emergency_contact: student.emergencyContact || '',  // 確保欄位名稱對應
+                emergency_phone: student.emergencyPhone || '',      // 確保欄位名稱對應
+                status: student.status || '',
+                remarks: student.remarks || '',
+                createdAt: student.createdAt || ''
+            }));
+
             try {
-                showNotification('正在同步到雲端...', 'warning');
-                document.getElementById('syncStatus').textContent = '正在上傳資料到 Google Sheets...';
-                
-                // 檢查是否為 Vercel 部署版本
-                const isVercel = window.location.hostname.includes('vercel.app');
-                const apiUrl = isVercel ? '/api/sync-students' : window.location.origin + '/api/sync-students';
-                
-                const response = await fetch(apiUrl, {
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ students })
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ students: data })
                 });
 
+                if (!response.ok) throw new Error('Network response was not ok');
+                
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification(`✅ ${result.message}`, 'success');
-                    document.getElementById('syncStatus').textContent = `✅ ${result.message} (${new Date().toLocaleString('zh-TW')})`;
+                    showNotification(`✅ 成功同步 ${data.length} 筆學員資料到雲端`, 'success');
                 } else {
-                    throw new Error(result.error);
+                    throw new Error(result.message || '同步失敗');
                 }
             } catch (error) {
-                console.error('同步失敗:', error);
-                showNotification('❌ 同步失敗: ' + error.message, 'error');
-                document.getElementById('syncStatus').textContent = `❌ 同步失敗: ${error.message}`;
+                console.error('Sync error:', error);
+                showNotification('❌ 同步失敗：' + error.message, 'error');
+                
+                // 顯示手動複製選項
+                const csvData = data.map(s => 
+                    `${s.id}\t${s.name}\t${s.nickname}\t${s.class}\t${s.phone}\t${s.email}\t${s.birthday}\t${s.emergency_contact}\t${s.emergency_phone}\t${s.status}\t${s.remarks}\t${s.createdAt}`
+                ).join('\n');
+                
+                navigator.clipboard.writeText(csvData);
+                showNotification('📋 已複製資料到剪貼簿，請手動貼上到 Google Sheets', 'info', 8000);
             }
         }
 
@@ -737,14 +845,30 @@
                 const isVercel = window.location.hostname.includes('vercel.app');
                 const apiUrl = isVercel ? '/api/sync-students' : window.location.origin + '/api/sync-students';
                 
+                // 確保學員資料包含所有必要欄位
+                const studentsWithAllFields = students.map(student => ({
+                    id: student.id || '',
+                    name: student.name || '',
+                    nickname: student.nickname || '',
+                    class: student.class || '',
+                    phone: student.phone || '',
+                    email: student.email || '',
+                    birthday: student.birthday || '',
+                    emergencyContact: student.emergencyContact || '',
+                    emergencyPhone: student.emergencyPhone || '',
+                    status: student.status || '',
+                    remarks: student.remarks || '',
+                    createdAt: student.createdAt || ''
+                }));
+                
                 await fetch(apiUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ students })
+                    body: JSON.stringify({ students: studentsWithAllFields })
                 });
-                console.log(`🔄 自動同步 ${students.length} 筆學員資料到雲端`);
+                console.log(`🔄 自動同步 ${students.length} 筆學員資料到雲端 (包含緊急聯絡資訊)`);
             } catch (error) {
-                console.log('🔄 自動同步失敗');
+                console.log('🔄 自動同步失敗:', error);
             }
         }
 
@@ -1343,7 +1467,7 @@
             const csvContent = "data:text/csv;charset=utf-8," 
                 + "學員ID,學員姓名,別名,班別,電話,信箱,生日,緊急聯絡人,緊急聯絡電話,狀態,建立日期,備註\n"
                 + students.map(student => 
-                    `"${student.id || ''}","${student.name}","${student.nickname || ''}","${student.class || ''}","${student.phone || ''}","${student.email || ''}","${student.birthday || ''}","${student.emergencyContact || ''}","${student.emergencyPhone || ''}","${student.status}","${student.createdAt}","${student.remarks || ''}"`
+                    `"${student.id || ''}","${student.name}","${student.nickname || ''}","${student.class || ''}","${student.phone || ''}","${student.email || ''}","${student.birthday ? formatBirthday(student.birthday) : ''}","${student.emergencyContact || ''}","${student.emergencyPhone || ''}","${student.status}","${student.createdAt}","${student.remarks || ''}"`
                 ).join("\n");
 
             const encodedUri = encodeURI(csvContent);
@@ -1355,6 +1479,86 @@
             document.body.removeChild(link);
             
             showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
+        }
+
+        // 頁面載入時執行
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStudents();
+            updateStatistics();
+            updateAttendanceDate();
+            checkAttendanceStatus();
+            loadClassesFromSchedule(); // 自動載入班別選項
+        });
+
+        // 格式化生日日期顯示
+        function formatBirthday(dateString) {
+            if (!dateString) return '';
+            const date = new Date(dateString);
+            const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            const day = date.getDate();
+            const month = months[date.getMonth()];
+            return `${day}-${month}`;
+        }
+
+        // 處理生日輸入，自動轉換格式
+        function handleBirthdayInput() {
+            const birthdayInput = document.getElementById('studentBirthday');
+            if (birthdayInput.value) {
+                const formatted = formatBirthday(birthdayInput.value);
+                console.log(`🎂 生日格式化: ${birthdayInput.value} → ${formatted}`);
+            }
+        }
+
+        // 從schedule頁面獲取班別列表
+        async function fetchClassList() {
+            try {
+                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ action: 'getClassList' })
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                if (result.success && result.classes) {
+                    updateClassSelect(result.classes);
+                } else {
+                    throw new Error('無法獲取班別列表');
+                }
+            } catch (error) {
+                console.error('獲取班別列表失敗:', error);
+                showNotification('❌ 無法載入班別列表，請重新整理頁面', 'error');
+            }
+        }
+
+        // 更新班別下拉選單
+        function updateClassSelect(classes) {
+            const select = document.getElementById('studentClass');
+            // 保留第一個"請選擇班別"選項
+            select.innerHTML = '<option value="">請選擇班別</option>';
+            // 添加班別選項
+            classes.forEach(c => {
+                const option = document.createElement('option');
+                option.value = c.class_id;
+                option.textContent = `${c.class_id} (${c.class_name || '未命名班別'})`;
+                select.appendChild(option);
+            });
+        }
+
+        // 頁面載入時初始化
+        window.addEventListener('load', () => {
+            loadStudents();
+            fetchClassList();
+        });
+
+        // 修改新增學員表單中的班別欄位
+        function updateClassField() {
+            const classInput = document.getElementById('studentClass');
+            classInput.setAttribute('list', 'classDatalist');
+            classInput.setAttribute('placeholder', '請選擇班別 ID');
         }
     </script>
 </body>
