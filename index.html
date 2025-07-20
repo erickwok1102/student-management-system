@@ -548,25 +548,53 @@
             showNotification('🔄 正在新增學員到雲端...', 'info');
 
             try {
-                // 直接同步到Google Sheets
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                // 先獲取現有學員列表
+                const getResponse = await fetch('/api/get-students');
+                let existingStudents = [];
+                
+                if (getResponse.ok) {
+                    const getResult = await getResponse.json();
+                    if (getResult.success && getResult.students) {
+                        existingStudents = getResult.students;
+                    }
+                }
+
+                // 生成新的學員ID
+                const maxId = existingStudents
+                    .map(s => s.id)
+                    .filter(id => id && id.startsWith('Y'))
+                    .map(id => parseInt(id.substring(1)))
+                    .filter(num => !isNaN(num))
+                    .sort((a, b) => b - a)[0] || 0;
+                
+                const newId = `Y${(maxId + 1).toString().padStart(4, '0')}`;
+                
+                // 添加ID到學員資料
+                studentData.id = newId;
+
+                // 將新學員添加到陣列
+                const updatedStudents = [...existingStudents, studentData];
+
+                // 同步整個學員陣列
+                const response = await fetch('/api/sync-students', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'addStudent',
-                        student: studentData
-                    }),
-                    redirect: 'follow'
+                        students: updatedStudents
+                    })
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    showNotification(`✅ 學員「${name}」已成功新增 (ID: ${result.studentId || 'Y系列'})`, 'success');
+                    showNotification(`✅ 學員「${name}」已成功新增 (ID: ${newId})`, 'success');
                     clearForm();
                     // 重新載入學員列表
                     await loadStudentsFromCloud();
@@ -576,6 +604,16 @@
             } catch (error) {
                 console.error('新增學員錯誤:', error);
                 showNotification('❌ 新增學員失敗：' + error.message, 'error');
+                
+                // 備用：複製到剪貼簿
+                const csvData = `${studentData.name}\t${studentData.nickname}\t${studentData.class}\t${studentData.phone}\t${studentData.email}\t${studentData.birthday}\t${studentData.emergencyContact}\t${studentData.emergencyPhone}\t${studentData.status}\t${studentData.remarks}\t${studentData.createdAt}`;
+                
+                try {
+                    await navigator.clipboard.writeText(csvData);
+                    showNotification('📋 已複製學員資料到剪貼簿，請手動貼上到 Google Sheets', 'info', 8000);
+                } catch (clipError) {
+                    console.error('複製到剪貼簿失敗:', clipError);
+                }
             }
         }
 
@@ -1513,15 +1551,18 @@
         // 從schedule頁面獲取班別列表
         async function fetchClassList() {
             try {
-                // 使用和課程表相同的API來獲取班別
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getClasses', {
+                // 使用Vercel API route來獲取班別
+                const response = await fetch('/api/get-classes', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                     }
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
                 if (result.success && result.classes) {
@@ -1532,7 +1573,7 @@
                 }
             } catch (error) {
                 console.error('獲取班別列表失敗:', error);
-                showNotification('❌ 無法載入班別列表，請重新整理頁面', 'error');
+                showNotification('❌ 無法載入班別列表，使用預設選項', 'warning');
                 
                 // 如果API失敗，提供手動輸入選項
                 const select = document.getElementById('studentClass');
@@ -1601,14 +1642,17 @@
             showNotification('🔄 正在載入學員列表...', 'info');
             
             try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
+                const response = await fetch('/api/get-students', {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
                     }
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
                 
@@ -1616,6 +1660,7 @@
                     displayStudents(result.students);
                     updateStatistics(result.students);
                     console.log('✅ 成功載入學員列表:', result.students.length, '筆資料');
+                    showNotification(`✅ 已載入 ${result.students.length} 筆學員資料`, 'success');
                 } else {
                     throw new Error('無法載入學員列表');
                 }
@@ -1630,6 +1675,9 @@
                         <h3>⚠️ 無法載入學員資料</h3>
                         <p>請檢查網路連線或聯繫系統管理員<br>
                         錯誤詳情：${error.message}</p>
+                        <button class="btn btn-primary" onclick="loadStudentsFromCloud()" style="margin-top: 15px;">
+                            🔄 重新載入
+                        </button>
                     </div>
                 `;
             }
@@ -1697,29 +1745,35 @@
             showNotification('🔄 正在刪除學員...', 'info');
 
             try {
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                // 注意：目前可能沒有專門的刪除API，所以先提示手動刪除
+                showNotification('⚠️ 請手動到 Google Sheets 刪除此學員記錄', 'warning', 5000);
+                
+                // 如果有刪除API，可以使用以下代碼：
+                /*
+                const response = await fetch('/api/delete-student', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'deleteStudent',
                         studentId: studentId
-                    }),
-                    redirect: 'follow'
+                    })
                 });
 
-                if (!response.ok) throw new Error('Network response was not ok');
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
                 
                 const result = await response.json();
                 
                 if (result.success) {
                     showNotification('✅ 學員已成功刪除', 'success');
-                    // 重新載入學員列表
                     await loadStudentsFromCloud();
                 } else {
                     throw new Error(result.message || '刪除失敗');
                 }
+                */
             } catch (error) {
                 console.error('刪除學員錯誤:', error);
                 showNotification('❌ 刪除學員失敗：' + error.message, 'error');
