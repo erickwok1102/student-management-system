@@ -378,13 +378,13 @@
                     <div class="sync-card">
                         <h4 style="color: #ffc107; margin-bottom: 20px; font-size: 20px;">📋 點名記錄</h4>
                         <button class="btn btn-warning" onclick="syncAttendanceToCloud()" style="width: 100%; margin-bottom: 10px;">
-                            📤 上傳點名記錄
+                            🚀 自動上傳到 Google Sheets
                         </button>
                         <button class="btn btn-primary" onclick="showAttendanceRecords()" style="width: 100%; margin-bottom: 20px;">
                             👀 查看本地記錄
                         </button>
                         <p style="font-size: 14px; color: #666; line-height: 1.6;">
-                            管理點名記錄，可查看或上傳到雲端<br>
+                            自動上傳點名記錄到雲端 Google Sheets<br>
                             <strong>記錄數：</strong><span id="attendanceCount">0</span> 筆
                         </p>
                     </div>
@@ -1058,37 +1058,84 @@
             alert(recordsText);
         }
 
-        // 同步點名記錄到雲端（簡化版）
-        function syncAttendanceToCloud() {
+        // 同步點名記錄到雲端（自動上傳版）
+        async function syncAttendanceToCloud() {
             if (todayAttendance.length === 0) {
                 showNotification('沒有點名記錄可同步', 'warning');
                 return;
             }
             
-            // 按照正確格式準備資料：日期 | 班別 | 學員ID | 學員姓名 | 出席狀態
-            const recordsForCopy = todayAttendance.map(record => 
-                `${record.date}\t${record.className}\t${record.studentId}\t${record.studentName}\t${record.status}`
-            ).join('\n');
-            
-            const header = '日期\t班別\t學員ID\t學員姓名\t出席狀態\n';
-            const fullData = header + recordsForCopy;
-            
-            // 複製到剪貼板
-            navigator.clipboard.writeText(fullData).then(() => {
-                showNotification(`✅ 已複製 ${todayAttendance.length} 筆記錄到剪貼板，可直接貼到Google Sheets`, 'success');
-                alert(`📋 點名記錄已複製到剪貼板！\n\n請到您的Google Sheets手動貼上：\n1. 開啟您的Google Sheets\n2. 選擇「attendance」工作表\n3. 按Ctrl+V貼上資料\n\n記錄格式：日期 | 班別 | 學員ID | 學員姓名 | 出席狀態`);
-            }).catch(() => {
-                // 如果複製失敗，顯示資料讓用戶手動複製
-                const textarea = document.createElement('textarea');
-                textarea.value = fullData;
-                document.body.appendChild(textarea);
-                textarea.select();
-                document.execCommand('copy');
-                document.body.removeChild(textarea);
+            try {
+                showNotification('正在上傳點名記錄到 Google Sheets...', 'warning');
                 
-                showNotification('請手動複製下方資料到Google Sheets', 'warning');
-                alert(`請複製以下資料到Google Sheets：\n\n${fullData}`);
-            });
+                // 準備上傳資料 - 按照正確格式：日期、班別、學員ID、學員姓名、出席狀態
+                const attendanceForSync = todayAttendance.map(record => ({
+                    date: record.date,
+                    class: record.className,
+                    studentId: record.studentId,
+                    studentName: record.studentName,
+                    status: record.status
+                }));
+                
+                console.log('準備上傳的點名記錄:', attendanceForSync);
+                
+                // 檢查是否為 Vercel 部署版本
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/sync-attendance' : window.location.origin + '/api/sync-attendance';
+                
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
+                    body: JSON.stringify({
+                        attendance: attendanceForSync
+                    })
+                });
+                
+                console.log('API 響應狀態:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('API 響應結果:', result);
+                
+                if (result.success) {
+                    showNotification(`✅ 已成功上傳 ${todayAttendance.length} 筆點名記錄到 Google Sheets`, 'success');
+                    console.log('✅ 點名記錄上傳成功');
+                } else {
+                    throw new Error(result.error || '上傳失敗');
+                }
+                
+            } catch (error) {
+                console.error('❌ 上傳點名記錄失敗:', error);
+                
+                // 如果API失敗，提供備用的手動方式
+                if (error.message.includes('Unexpected token') || error.message.includes('not valid JSON')) {
+                    showNotification('⚠️ 自動上傳失敗，為您準備手動上傳資料...', 'warning');
+                    
+                    // 備用：準備手動複製的資料
+                    const recordsForCopy = todayAttendance.map(record => 
+                        `${record.date}\t${record.className}\t${record.studentId}\t${record.studentName}\t${record.status}`
+                    ).join('\n');
+                    
+                    const header = '日期\t班別\t學員ID\t學員姓名\t出席狀態\n';
+                    const fullData = header + recordsForCopy;
+                    
+                    try {
+                        await navigator.clipboard.writeText(fullData);
+                        showNotification('📋 已複製到剪貼板，請手動貼到 Google Sheets', 'warning');
+                        alert(`自動上傳失敗，但資料已複製到剪貼板！\n\n請到您的 Google Sheets 手動貼上：\n1. 開啟您的 Google Sheets\n2. 選擇「attendance」工作表\n3. 按 Ctrl+V 貼上資料`);
+                    } catch (clipboardError) {
+                        showNotification('❌ 上傳失敗，請檢查網路連接', 'error');
+                    }
+                } else {
+                    showNotification('❌ 上傳失敗: ' + error.message, 'error');
+                }
+            }
         }
         
         // 顯示今日出席記錄
