@@ -6,7 +6,8 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>學員管理系統 - 修復版 v2.2</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📚</text></svg>">
+    <title>學員管理系統 - 修復版 v2.3</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
@@ -548,7 +549,7 @@
             showNotification('🔄 正在新增學員到雲端...', 'info');
 
             try {
-                // 先獲取現有學員列表
+                // 獲取現有學員來生成新ID (但不覆蓋資料)
                 const getResponse = await fetch('/api/get-students');
                 let existingStudents = [];
                 
@@ -572,18 +573,30 @@
                 // 添加ID到學員資料
                 studentData.id = newId;
 
-                // 將新學員添加到陣列
-                const updatedStudents = [...existingStudents, studentData];
-
-                // 同步整個學員陣列
-                const response = await fetch('/api/sync-students', {
+                // 直接調用Google Apps Script添加新行，不覆蓋整個工作表
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        students: updatedStudents
-                    })
+                        action: 'addStudentRow',  // 新的action，只添加一行
+                        student: {
+                            id: studentData.id,
+                            name: studentData.name,
+                            nickname: studentData.nickname,
+                            class: studentData.class,
+                            phone: studentData.phone,
+                            email: studentData.email,
+                            birthday: studentData.birthday,
+                            emergency_contact: studentData.emergencyContact,  // 修正欄位名稱
+                            emergency_phone: studentData.emergencyPhone,      // 修正欄位名稱
+                            status: studentData.status,
+                            remarks: studentData.remarks,
+                            createdAt: studentData.createdAt
+                        }
+                    }),
+                    redirect: 'follow'
                 });
 
                 if (!response.ok) {
@@ -605,12 +618,12 @@
                 console.error('新增學員錯誤:', error);
                 showNotification('❌ 新增學員失敗：' + error.message, 'error');
                 
-                // 備用：複製到剪貼簿
-                const csvData = `${studentData.name}\t${studentData.nickname}\t${studentData.class}\t${studentData.phone}\t${studentData.email}\t${studentData.birthday}\t${studentData.emergencyContact}\t${studentData.emergencyPhone}\t${studentData.status}\t${studentData.remarks}\t${studentData.createdAt}`;
+                // 備用：複製到剪貼簿 (包含正確的欄位順序)
+                const csvData = `${studentData.id}\t${studentData.name}\t${studentData.nickname}\t${studentData.class}\t${studentData.phone}\t${studentData.email}\t${studentData.birthday}\t${studentData.emergencyContact}\t${studentData.emergencyPhone}\t${studentData.status}\t${studentData.remarks}\t${studentData.createdAt}`;
                 
                 try {
                     await navigator.clipboard.writeText(csvData);
-                    showNotification('📋 已複製學員資料到剪貼簿，請手動貼上到 Google Sheets', 'info', 8000);
+                    showNotification('📋 已複製學員資料到剪貼簿，請手動貼上到 Google Sheets 新行', 'info', 8000);
                 } catch (clipError) {
                     console.error('複製到剪貼簿失敗:', clipError);
                 }
@@ -1520,13 +1533,11 @@
             showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
         }
 
-        // 頁面載入時執行
+        // 頁面載入時執行 (簡化版，移除無用代碼)
         document.addEventListener('DOMContentLoaded', function() {
-            loadStudents();
-            updateStatistics();
-            updateAttendanceDate();
-            checkAttendanceStatus();
-            loadClassesFromSchedule(); // 自動載入班別選項
+            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
+            fetchClassList();
+            loadStudentsFromCloud();
         });
 
         // 格式化生日日期顯示
@@ -1629,13 +1640,6 @@
             fetchClassList();
             loadStudentsFromCloud();
         });
-
-        // 修改新增學員表單中的班別欄位
-        function updateClassField() {
-            const classInput = document.getElementById('studentClass');
-            classInput.setAttribute('list', 'classDatalist');
-            classInput.setAttribute('placeholder', '請選擇班別 ID');
-        }
 
         // 從雲端載入學員列表
         async function loadStudentsFromCloud() {
