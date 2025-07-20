@@ -285,15 +285,6 @@
                         <label>緊急聯絡電話</label>
                         <input type="tel" id="emergencyPhone" placeholder="緊急聯絡電話">
                     </div>
-                    <div class="form-group">
-                        <label>狀態</label>
-                        <select id="studentStatus">
-                            <option value="在讀">在讀</option>
-                            <option value="休學">休學</option>
-                            <option value="畢業">畢業</option>
-                            <option value="退學">退學</option>
-                        </select>
-                    </div>
                 </div>
                 <div class="form-group">
                     <label>備註</label>
@@ -520,7 +511,7 @@
             return `${day}-${month}`;
         }
 
-        // 新增學員
+        // 新增學員 (直接同步到雲端，不使用本地記憶)
         async function addStudent() {
             const name = document.getElementById('studentName').value.trim();
             const className = document.getElementById('studentClass').value.trim();
@@ -531,74 +522,81 @@
             }
             
             if (!className) {
-                showNotification('請輸入班別名稱', 'error');
+                showNotification('請選擇班別', 'error');
                 return;
             }
 
-            // 生成新的學員ID
-            const studentId = generateNextStudentId();
+            // 格式化生日 (只要日-月格式，如 5-Aug)
+            const birthdayInput = document.getElementById('studentBirthday').value;
+            const formattedBirthday = birthdayInput ? formatBirthday(birthdayInput) : '';
 
-            const student = {
-                id: studentId,
+            // 準備學員資料 (不生成本地ID，讓Google Sheets決定)
+            const studentData = {
                 name: name,
                 nickname: document.getElementById('studentNickname').value.trim(),
                 class: className,
                 phone: document.getElementById('studentPhone').value.trim(),
                 email: document.getElementById('studentEmail').value.trim(),
-                birthday: formatBirthday(document.getElementById('studentBirthday').value),
+                birthday: formattedBirthday,
                 emergencyContact: document.getElementById('emergencyContact').value.trim(),
                 emergencyPhone: document.getElementById('emergencyPhone').value.trim(),
-                status: document.getElementById('studentStatus').value,
+                status: '在讀', // 預設狀態
                 remarks: document.getElementById('studentRemarks').value.trim(),
                 createdAt: formatDateOnly()
             };
 
-            students.push(student);
-            localStorage.setItem('studentData', JSON.stringify(students));
-            
-            clearForm();
-            displayStudents();
-            updateClassOptions(); // 更新班別選項
-            updateStatistics();
-            showNotification(`✅ 學員「${name}」已成功新增 (ID: ${studentId})`, 'success');
-            
-            setTimeout(() => {
-                syncToCloudSilently();
-            }, 1000);
+            showNotification('🔄 正在新增學員到雲端...', 'info');
+
+            try {
+                // 直接同步到Google Sheets
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'addStudent',
+                        student: studentData
+                    }),
+                    redirect: 'follow'
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification(`✅ 學員「${name}」已成功新增 (ID: ${result.studentId || 'Y系列'})`, 'success');
+                    clearForm();
+                    // 重新載入學員列表
+                    await loadStudentsFromCloud();
+                } else {
+                    throw new Error(result.message || '新增失敗');
+                }
+            } catch (error) {
+                console.error('新增學員錯誤:', error);
+                showNotification('❌ 新增學員失敗：' + error.message, 'error');
+            }
         }
 
         // 清空表單
         function clearForm() {
             document.getElementById('studentName').value = '';
             document.getElementById('studentNickname').value = '';
-            document.getElementById('studentClass').value = ''; // 重置為預設選項
+            document.getElementById('studentClass').value = '';
             document.getElementById('studentPhone').value = '';
             document.getElementById('studentEmail').value = '';
             document.getElementById('studentBirthday').value = '';
             document.getElementById('emergencyContact').value = '';
             document.getElementById('emergencyPhone').value = '';
-            document.getElementById('studentStatus').value = '在讀';
             document.getElementById('studentRemarks').value = '';
         }
 
-        // 載入學員資料
+        // 載入學員資料 (已改為從雲端載入，見 loadStudentsFromCloud 函數)
+        // 此函數已停用，請使用 loadStudentsFromCloud()
         async function loadStudents() {
-            const localData = localStorage.getItem('studentData');
-            if (localData) {
-                try {
-                    students = JSON.parse(localData);
-                    console.log(`📚 載入 ${students.length} 筆本地學員資料`);
-                } catch (error) {
-                    console.error('本地資料解析失敗:', error);
-                    students = [];
-                }
-            } else {
-                students = [];
-            }
-            
-            displayStudents();
-            updateClassOptions();
-            updateStatistics();
+            console.log('⚠️ loadStudents 已停用，請使用 loadStudentsFromCloud()');
+            await loadStudentsFromCloud();
         }
 
         // 顯示學員列表
@@ -1586,8 +1584,9 @@
 
         // 頁面載入時初始化
         window.addEventListener('load', () => {
-            loadStudents();
+            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
             fetchClassList();
+            loadStudentsFromCloud();
         });
 
         // 修改新增學員表單中的班別欄位
@@ -1595,6 +1594,145 @@
             const classInput = document.getElementById('studentClass');
             classInput.setAttribute('list', 'classDatalist');
             classInput.setAttribute('placeholder', '請選擇班別 ID');
+        }
+
+        // 從雲端載入學員列表
+        async function loadStudentsFromCloud() {
+            showNotification('🔄 正在載入學員列表...', 'info');
+            
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getStudents', {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                
+                if (result.success && result.students) {
+                    displayStudents(result.students);
+                    updateStatistics(result.students);
+                    console.log('✅ 成功載入學員列表:', result.students.length, '筆資料');
+                } else {
+                    throw new Error('無法載入學員列表');
+                }
+            } catch (error) {
+                console.error('載入學員列表失敗:', error);
+                showNotification('❌ 載入學員列表失敗：' + error.message, 'error');
+                
+                // 顯示空狀態
+                const list = document.getElementById('studentList');
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>⚠️ 無法載入學員資料</h3>
+                        <p>請檢查網路連線或聯繫系統管理員<br>
+                        錯誤詳情：${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // 顯示學員列表 (接收學員陣列作為參數)
+        function displayStudents(studentArray = []) {
+            const list = document.getElementById('studentList');
+            
+            if (studentArray.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <h3>📚 還沒有學員資料</h3>
+                        <p>點擊上方的「新增學員」按鈕開始建立你的學員名冊<br>
+                        所有資料會直接儲存到 Google Sheets 中</p>
+                    </div>
+                `;
+                return;
+            }
+
+            list.innerHTML = studentArray.map(student => `
+                <div class="student-item">
+                    <div>
+                        <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
+                            ${student.name}
+                            ${student.nickname ? `<span style="color: #666; font-weight: 400; font-size: 16px;">(${student.nickname})</span>` : ''}
+                            <span style="color: #999; font-weight: 400; font-size: 14px; margin-left: 10px;">ID: ${student.id}</span>
+                        </div>
+                        <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
+                            <span style="margin-right: 20px; background: #e3f2fd; padding: 4px 12px; border-radius: 20px; color: #1976d2;">
+                                📚 ${student.class || '未分配班別'}
+                            </span>
+                            <span style="color: ${getStatusColor(student.status)}; font-weight: 600;">
+                                ● ${student.status}
+                            </span>
+                        </div>
+                        <div style="color: #999; font-size: 13px; line-height: 1.4;">
+                            📅 ${student.createdAt} 建立
+                            ${student.phone ? ` | 📞 ${student.phone}` : ''}
+                            ${student.email ? ` | 📧 ${student.email}` : ''}
+                            ${student.birthday ? ` | 🎂 ${student.birthday}` : ''}
+                        </div>
+                        ${student.emergencyContact || student.emergencyPhone ? `
+                            <div style="color: #e74c3c; font-size: 12px; margin-top: 4px;">
+                                🚨 緊急聯絡: ${student.emergencyContact || ''}${student.emergencyPhone ? ` (${student.emergencyPhone})` : ''}
+                            </div>
+                        ` : ''}
+                    </div>
+                    <div>
+                        <button class="btn btn-danger" onclick="deleteStudentFromCloud('${student.id}')" 
+                                title="刪除學員" style="padding: 10px 15px;">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 從雲端刪除學員
+        async function deleteStudentFromCloud(studentId) {
+            if (!confirm('確定要刪除這位學員嗎？此操作無法復原。')) {
+                return;
+            }
+
+            showNotification('🔄 正在刪除學員...', 'info');
+
+            try {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'deleteStudent',
+                        studentId: studentId
+                    }),
+                    redirect: 'follow'
+                });
+
+                if (!response.ok) throw new Error('Network response was not ok');
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showNotification('✅ 學員已成功刪除', 'success');
+                    // 重新載入學員列表
+                    await loadStudentsFromCloud();
+                } else {
+                    throw new Error(result.message || '刪除失敗');
+                }
+            } catch (error) {
+                console.error('刪除學員錯誤:', error);
+                showNotification('❌ 刪除學員失敗：' + error.message, 'error');
+            }
+        }
+
+        // 更新統計資訊
+        function updateStatistics(studentArray = []) {
+            const totalStudents = studentArray.length;
+            const activeStudents = studentArray.filter(s => s.status === '在讀').length;
+            const classes = [...new Set(studentArray.map(s => s.class))].filter(c => c).length;
+            
+            console.log(`📊 統計: 總學員 ${totalStudents}, 在讀 ${activeStudents}, 班別 ${classes}`);
         }
     </script>
 </body>
