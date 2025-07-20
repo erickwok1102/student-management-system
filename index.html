@@ -549,7 +549,7 @@
             showNotification('🔄 正在新增學員到雲端...', 'info');
 
             try {
-                // 獲取現有學員來生成新ID (但不覆蓋資料)
+                // 獲取現有學員來生成新ID，然後只同步新學員
                 const getResponse = await fetch('/api/get-students');
                 let existingStudents = [];
                 
@@ -573,30 +573,16 @@
                 // 添加ID到學員資料
                 studentData.id = newId;
 
-                // 直接調用Google Apps Script添加新行，不覆蓋整個工作表
-                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+                // 使用現有的sync-students API，但改成append模式
+                const response = await fetch('/api/sync-students', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        action: 'addStudentRow',  // 新的action，只添加一行
-                        student: {
-                            id: studentData.id,
-                            name: studentData.name,
-                            nickname: studentData.nickname,
-                            class: studentData.class,
-                            phone: studentData.phone,
-                            email: studentData.email,
-                            birthday: studentData.birthday,
-                            emergency_contact: studentData.emergencyContact,  // 修正欄位名稱
-                            emergency_phone: studentData.emergencyPhone,      // 修正欄位名稱
-                            status: studentData.status,
-                            remarks: studentData.remarks,
-                            createdAt: studentData.createdAt
-                        }
-                    }),
-                    redirect: 'follow'
+                        action: 'appendStudent',  // 新的action表示追加而不是覆蓋
+                        students: [studentData]   // 只傳送新學員
+                    })
                 });
 
                 if (!response.ok) {
