@@ -415,7 +415,10 @@
     <div id="notification" class="notification"></div>
 
     <script>
-        // 全域變數
+        // Google Apps Script URL 設定
+        const GOOGLE_APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw_m3SjHokYxU-eUkFrMtcrVXnoxSGhRAfuUxYDt6P81UwmxcMrkKjz-h7A4teL8kKIjQ/exec';
+        
+        // 學員資料陣列
         let students = [];
         let todayAttendance = [];
         let currentAttendanceClass = '';
@@ -807,7 +810,7 @@
             }));
 
             try {
-                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1512,12 +1515,12 @@
         // 從schedule頁面獲取班別列表
         async function fetchClassList() {
             try {
-                const response = await fetch('YOUR_GOOGLE_APPS_SCRIPT_URL', {
-                    method: 'POST',
+                // 使用和課程表相同的API來獲取班別
+                const response = await fetch(GOOGLE_APPS_SCRIPT_URL + '?action=getClasses', {
+                    method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ action: 'getClassList' })
+                    }
                 });
 
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -1525,12 +1528,22 @@
                 const result = await response.json();
                 if (result.success && result.classes) {
                     updateClassSelect(result.classes);
+                    console.log('✅ 成功載入班別列表:', result.classes);
                 } else {
                     throw new Error('無法獲取班別列表');
                 }
             } catch (error) {
                 console.error('獲取班別列表失敗:', error);
                 showNotification('❌ 無法載入班別列表，請重新整理頁面', 'error');
+                
+                // 如果API失敗，提供手動輸入選項
+                const select = document.getElementById('studentClass');
+                select.innerHTML = `
+                    <option value="">請選擇班別</option>
+                    <option value="青年班">青年班</option>
+                    <option value="成人班">成人班</option>
+                    <option value="兒童班">兒童班</option>
+                `;
             }
         }
 
@@ -1539,13 +1552,36 @@
             const select = document.getElementById('studentClass');
             // 保留第一個"請選擇班別"選項
             select.innerHTML = '<option value="">請選擇班別</option>';
-            // 添加班別選項
-            classes.forEach(c => {
-                const option = document.createElement('option');
-                option.value = c.class_id;
-                option.textContent = `${c.class_id} (${c.class_name || '未命名班別'})`;
-                select.appendChild(option);
-            });
+            
+            // 處理不同的資料格式
+            if (Array.isArray(classes)) {
+                classes.forEach(classItem => {
+                    const option = document.createElement('option');
+                    
+                    // 支援不同的資料格式
+                    if (typeof classItem === 'string') {
+                        // 簡單字串格式
+                        option.value = classItem;
+                        option.textContent = classItem;
+                    } else if (classItem.class_id) {
+                        // 物件格式 {class_id: "青年班", class_name: "青年班描述"}
+                        option.value = classItem.class_id;
+                        option.textContent = classItem.class_name ? 
+                            `${classItem.class_id} (${classItem.class_name})` : 
+                            classItem.class_id;
+                    } else if (classItem.name) {
+                        // 物件格式 {name: "青年班"}
+                        option.value = classItem.name;
+                        option.textContent = classItem.name;
+                    }
+                    
+                    select.appendChild(option);
+                });
+                
+                console.log(`✅ 已載入 ${classes.length} 個班別選項`);
+            } else {
+                console.warn('⚠️ 班別資料格式不正確:', classes);
+            }
         }
 
         // 頁面載入時初始化
