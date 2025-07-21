@@ -32,7 +32,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'syncStudents',
+                action: 'appendStudent',  // ✅ 改成這樣
                 students: students
             })
         });
@@ -46,16 +46,16 @@ export default async function handler(req, res) {
         if (data.success) {
             res.status(200).json({
                 success: true,
-                message: `成功同步 ${students.length} 筆學員資料到 Google Sheets`,
+                message: `成功新增 ${students.length} 筆學員資料到 Google Sheets`,
                 count: students.length,
                 timestamp: new Date().toISOString()
             });
         } else {
-            throw new Error(data.error || '同步失敗');
+            throw new Error(data.error || '新增失敗');
         }
 
     } catch (error) {
-        console.error('Sync students error:', error);
+        console.error('Add students error:', error);
         res.status(500).json({
             success: false,
             error: error.message,
