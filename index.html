@@ -221,9 +221,69 @@
             .grid-form { grid-template-columns: 1fr; }
             .stats-grid { grid-template-columns: repeat(2, 1fr); gap: 15px; }
             .sync-grid { grid-template-columns: 1fr; }
-            .tabs { flex-wrap: wrap; }
-            .tab { padding: 15px 20px; }
-            .attendance-btn { padding: 8px 16px !important; font-size: 14px !important; }
+            
+            /* 選單一行顯示 */
+            .tabs { 
+                flex-wrap: nowrap; 
+                overflow-x: auto; 
+                -webkit-overflow-scrolling: touch;
+            }
+            .tab { 
+                padding: 12px 15px; 
+                font-size: 14px;
+                white-space: nowrap;
+                min-width: auto;
+                flex: 1;
+            }
+            
+            /* 點名按鈕優化 */
+            .attendance-btn, .attendance-choice-btn { 
+                padding: 8px 12px !important; 
+                font-size: 14px !important;
+                margin: 2px !important;
+            }
+            
+            /* 學員項目橫向佈局 */
+            .student-attendance-item {
+                display: flex !important;
+                align-items: center !important;
+                justify-content: space-between !important;
+                padding: 15px !important;
+                margin-bottom: 10px !important;
+                border-radius: 10px !important;
+                background: #f8f9fa !important;
+                border-left: 4px solid #007bff !important;
+            }
+            
+            .student-info {
+                flex: 1 !important;
+                margin-right: 10px !important;
+            }
+            
+            .student-name {
+                font-size: 16px !important;
+                font-weight: 600 !important;
+                margin-bottom: 4px !important;
+                color: #333 !important;
+            }
+            
+            .student-class {
+                font-size: 12px !important;
+                color: #666 !important;
+            }
+            
+            .attendance-buttons {
+                display: flex !important;
+                gap: 4px !important;
+                flex-wrap: nowrap !important;
+            }
+            
+            .attendance-choice-btn {
+                min-width: 50px !important;
+                padding: 8px 6px !important;
+                font-size: 11px !important;
+                border-radius: 6px !important;
+            }
         }
     </style>
 </head>
@@ -670,7 +730,7 @@
                             📅 ${student.createdAt} 建立
                             ${student.phone ? ` | 📞 ${student.phone}` : ''}
                             ${student.email ? ` | 📧 ${student.email}` : ''}
-                            ${student.birthday ? ` | 🎂 ${formatBirthday(student.birthday)}` : ''}
+                            ${student.birthday ? ` | 🎂 ${student.birthday}` : ''}
                         </div>
                         ${student.emergencyContact || student.emergencyPhone ? `
                             <div style="color: #e74c3c; font-size: 12px; margin-top: 4px;">
@@ -1042,46 +1102,43 @@
             tempAttendanceChoices = {};
             
             container.innerHTML = classStudents.map(student => `
-                <div class="student-item" style="margin-bottom: 20px; padding: 20px; border-radius: 15px;">
-                    <div style="margin-bottom: 15px;">
-                        <div style="font-size: 20px; font-weight: 600; margin-bottom: 8px; color: #333;">
+                <div class="student-attendance-item">
+                    <div class="student-info">
+                        <div class="student-name">
                             ${student.name}
-                            ${student.nickname ? `<span style="color: #666; font-size: 16px;">(${student.nickname})</span>` : ''}
+                            ${student.nickname ? `<span style="color: #999; font-size: 14px;">(${student.nickname})</span>` : ''}
                         </div>
-                        <div style="font-size: 14px; color: #666;">
+                        <div class="student-class">
                             班別: ${student.class}
                         </div>
                     </div>
-                    <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
+                    <div class="attendance-buttons">
                         <button class="attendance-choice-btn btn btn-success" 
                                 onclick="selectAttendanceStatus('${student.id}', '出席', this)"
                                 data-student-id="${student.id}" 
                                 data-status="出席" 
-                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
-                            <span class="btn-text">✅ 出席</span>
-                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #28a745; font-size: 14px; line-height: 20px;">✓</span>
+                                title="出席">
+                            ✅
                         </button>
                         <button class="attendance-choice-btn btn btn-warning" 
                                 onclick="selectAttendanceStatus('${student.id}', '請假', this)"
                                 data-student-id="${student.id}" 
                                 data-status="請假" 
-                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
-                            <span class="btn-text">🏥 請假</span>
-                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #ffc107; font-size: 14px; line-height: 20px;">✓</span>
+                                title="請假">
+                            🏥
                         </button>
                         <button class="attendance-choice-btn btn btn-primary" 
                                 onclick="selectAttendanceStatus('${student.id}', '遲到', this)"
                                 data-student-id="${student.id}" 
                                 data-status="遲到" 
-                                style="padding: 12px 24px; font-size: 16px; font-weight: 600; border-radius: 10px; position: relative; min-width: 100px;">
-                            <span class="btn-text">⏰ 遲到</span>
-                            <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #007bff; font-size: 14px; line-height: 20px;">✓</span>
+                                title="遲到">
+                            ⏰
                         </button>
                     </div>
                 </div>
             `).join('');
             
-            console.log('✅ 點名列表已生成');
+            console.log('✅ 點名列表已生成（手機友好佈局）');
             console.log('學員列表:', classStudents.map(s => ({ id: s.id, name: s.name })));
         }
 
@@ -1104,23 +1161,14 @@
                 btn.style.backgroundColor = '';
                 btn.style.borderColor = '';
                 btn.style.transform = 'scale(1)';
-                
-                const checkMark = btn.querySelector('.check-mark');
-                if (checkMark) {
-                    checkMark.style.display = 'none';
-                }
+                btn.style.boxShadow = '';
             });
             
             // 設定選中按鈕的樣式
             if (clickedButton) {
                 clickedButton.classList.add('selected');
-                clickedButton.style.transform = 'scale(0.95)';
-                clickedButton.style.borderWidth = '3px';
-                
-                const checkMark = clickedButton.querySelector('.check-mark');
-                if (checkMark) {
-                    checkMark.style.display = 'block';
-                }
+                clickedButton.style.transform = 'scale(0.9)';
+                clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
                 
                 // 根據狀態設定顏色
                 switch(status) {
@@ -1143,7 +1191,7 @@
             const student = students.find(s => s.id === studentId);
             const studentName = student ? student.name : `學員${studentId}`;
             
-            showNotification(`${studentName} 選擇：${status}`, 'success');
+            showNotification(`${studentName}: ${status}`, 'success');
             
             // 更新儲存按鈕狀態
             updateSaveButtonStatus();
