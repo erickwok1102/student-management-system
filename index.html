@@ -231,7 +231,6 @@
     <div class="container">
         <div class="header">
             <h1>🎓 學員管理系統</h1>
-            <p>修復版 - 簡化班別管理</p>
             <div style="margin-top: 20px;">
                 <span style="font-size: 16px;">系統狀態:</span>
                 <span class="status-indicator status-online" id="serverStatus"></span>
@@ -241,13 +240,59 @@
 
         <!-- 標籤頁導航 -->
         <div class="tabs">
-            <button class="tab active" onclick="showTab('students', this)">👥 新增學員</button>
-            <button class="tab" onclick="showTab('attendance', this)">✅ 點名系統</button>
+            <button class="tab active" onclick="showTab('attendance', this)">✅ 點名系統</button>
+            <button class="tab" onclick="showTab('students', this)">👥 新增學員</button>
             <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
         </div>
 
+        <!-- 點名系統標籤 -->
+        <div id="attendanceTab" class="tab-content active">
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">✅ 點名系統</h3>
+                
+                <div class="grid-form">
+                    <div class="form-group">
+                        <label>日期 *</label>
+                        <input type="date" id="attendanceDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>班別 *</label>
+                        <select id="attendanceClass" required onchange="loadStudentsForAttendance()">
+                            <option value="">請選擇班別</option>
+                            <!-- 班別選項將從學員資料中動態載入 -->
+                        </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
+                </div>
+            </div>
+
+            <!-- 點名列表 -->
+            <div class="card" id="attendanceListCard" style="display: none;">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 點名列表</h3>
+                <div id="attendanceStudentsList"></div>
+                <div style="margin-top: 30px; text-align: center;">
+                    <button class="btn btn-success" onclick="saveAndUploadAttendance()">💾 儲存並自動上傳點名記錄</button>
+                    <button class="btn btn-warning" onclick="resetAttendance()">🔄 重新點名</button>
+                </div>
+            </div>
+
+            <!-- 今日點名記錄 -->
+            <div class="card">
+                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📅 今日點名記錄</h3>
+                <div class="student-list" id="todayAttendanceList">
+                    <div class="empty-state">
+                        <h3>📝 還沒有今日的點名記錄</h3>
+                        <p>選擇班別並開始點名</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- 學員管理標籤 -->
-        <div id="studentsTab" class="tab-content active">
+        <div id="studentsTab" class="tab-content">
             <div class="card">
                 <h3 style="margin-bottom: 30px; color: #333; font-size: 24px;">➕ 新增學員</h3>
                 <div class="grid-form">
@@ -303,52 +348,6 @@
                 <div class="student-list" id="studentList">
                     <div class="empty-state">
                         <h3>🔄 載入中...</h3>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 點名系統標籤 -->
-        <div id="attendanceTab" class="tab-content">
-            <div class="card">
-                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">✅ 點名系統</h3>
-                
-                <div class="grid-form">
-                    <div class="form-group">
-                        <label>日期 *</label>
-                        <input type="date" id="attendanceDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>班別 *</label>
-                        <select id="attendanceClass" required onchange="loadStudentsForAttendance()">
-                            <option value="">請選擇班別</option>
-                            <!-- 班別選項將從學員資料中動態載入 -->
-                        </select>
-                    </div>
-                </div>
-
-                <div style="margin-top: 30px; text-align: center;">
-                    <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
-                </div>
-            </div>
-
-            <!-- 點名列表 -->
-            <div class="card" id="attendanceListCard" style="display: none;">
-                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 點名列表</h3>
-                <div id="attendanceStudentsList"></div>
-                <div style="margin-top: 30px; text-align: center;">
-                    <button class="btn btn-success" onclick="saveAttendance()">💾 儲存點名記錄</button>
-                    <button class="btn btn-warning" onclick="resetAttendance()">🔄 重新點名</button>
-                </div>
-            </div>
-
-            <!-- 今日點名記錄 -->
-            <div class="card">
-                <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📅 今日點名記錄</h3>
-                <div class="student-list" id="todayAttendanceList">
-                    <div class="empty-state">
-                        <h3>📝 還沒有今日的點名記錄</h3>
-                        <p>選擇班別並開始點名</p>
                     </div>
                 </div>
             </div>
@@ -1777,6 +1776,26 @@
             const classes = [...new Set(studentArray.map(s => s.class))].filter(c => c).length;
             
             console.log(`📊 統計: 總學員 ${totalStudents}, 在讀 ${activeStudents}, 班別 ${classes}`);
+        }
+
+        // 儲存並自動上傳點名記錄 (一鍵完成)
+        async function saveAndUploadAttendance() {
+            console.log('=== 開始儲存並自動上傳點名記錄 ===');
+            
+            // 先儲存到本地
+            await saveAttendance();
+            
+            // 等待一下讓本地儲存完成
+            setTimeout(async () => {
+                // 檢查是否有記錄
+                if (todayAttendance.length > 0) {
+                    console.log('✅ 本地儲存完成，開始自動上傳...');
+                    // 自動上傳到 Google Sheets
+                    await syncAttendanceToCloud();
+                } else {
+                    console.log('⚠️ 沒有點名記錄可上傳');
+                }
+            }, 1000);
         }
     </script>
 </body>
