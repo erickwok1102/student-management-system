@@ -1001,27 +1001,37 @@
             console.log('- currentAttendanceDate:', currentAttendanceDate);
             console.log('- currentAttendanceClass:', currentAttendanceClass);
             
-            // 獲取該班別的學員
-            const classStudents = students.filter(s => s.class === className);
-            console.log(`📚 ${className} 的學員:`, classStudents);
+            // 獲取該班別的學員，並且只篩選「在讀」狀態的學員
+            const allClassStudents = students.filter(s => s.class === className);
+            const activeStudents = allClassStudents.filter(s => s.status === '在讀');
             
-            if (classStudents.length === 0) {
+            console.log(`📚 ${className} 總學員數:`, allClassStudents.length);
+            console.log(`✅ ${className} 在讀學員數:`, activeStudents.length);
+            console.log('在讀學員名單:', activeStudents.map(s => s.name));
+            
+            if (allClassStudents.length === 0) {
                 showNotification(`${className} 沒有學員資料`, 'warning');
                 console.log('❌ 該班別沒有學員');
                 return;
             }
             
-            console.log(`✅ 找到 ${classStudents.length} 位學員`);
+            if (activeStudents.length === 0) {
+                showNotification(`${className} 沒有「在讀」狀態的學員`, 'warning');
+                console.log('❌ 該班別沒有在讀學員');
+                return;
+            }
             
-            // 顯示點名列表
-            displayAttendanceList(classStudents);
+            console.log(`✅ 找到 ${activeStudents.length} 位在讀學員`);
+            
+            // 顯示點名列表（只顯示在讀學員）
+            displayAttendanceList(activeStudents);
             document.getElementById('attendanceListCard').style.display = 'block';
             
             // 設置點名按鈕事件監聽器
             setupAttendanceButtons();
             
-            showNotification(`開始 ${className} 的點名`, 'success');
-            console.log('✅ 點名列表已顯示');
+            showNotification(`開始 ${className} 的點名 (${activeStudents.length} 位在讀學員)`, 'success');
+            console.log('✅ 點名列表已顯示（僅在讀學員）');
         }
         
         // 顯示點名列表
