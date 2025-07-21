@@ -280,9 +280,10 @@
             
             .attendance-choice-btn {
                 min-width: 50px !important;
-                padding: 8px 6px !important;
-                font-size: 11px !important;
+                padding: 8px 10px !important;
+                font-size: 12px !important;
                 border-radius: 6px !important;
+                font-weight: 600 !important;
             }
         }
     </style>
@@ -1118,21 +1119,21 @@
                                 data-student-id="${student.id}" 
                                 data-status="出席" 
                                 title="出席">
-                            ✅
+                            出席
+                        </button>
+                        <button class="attendance-choice-btn btn btn-danger" 
+                                onclick="selectAttendanceStatus('${student.id}', '缺席', this)"
+                                data-student-id="${student.id}" 
+                                data-status="缺席" 
+                                title="缺席">
+                            缺席
                         </button>
                         <button class="attendance-choice-btn btn btn-warning" 
-                                onclick="selectAttendanceStatus('${student.id}', '請假', this)"
-                                data-student-id="${student.id}" 
-                                data-status="請假" 
-                                title="請假">
-                            🏥
-                        </button>
-                        <button class="attendance-choice-btn btn btn-primary" 
                                 onclick="selectAttendanceStatus('${student.id}', '遲到', this)"
                                 data-student-id="${student.id}" 
                                 data-status="遲到" 
                                 title="遲到">
-                            ⏰
+                            遲到
                         </button>
                     </div>
                 </div>
@@ -1176,13 +1177,13 @@
                         clickedButton.style.backgroundColor = '#198754';
                         clickedButton.style.borderColor = '#146c43';
                         break;
-                    case '請假':
-                        clickedButton.style.backgroundColor = '#fd7e14';
-                        clickedButton.style.borderColor = '#fd7e14';
+                    case '缺席':
+                        clickedButton.style.backgroundColor = '#dc3545';
+                        clickedButton.style.borderColor = '#dc3545';
                         break;
                     case '遲到':
-                        clickedButton.style.backgroundColor = '#0d6efd';
-                        clickedButton.style.borderColor = '#0a58ca';
+                        clickedButton.style.backgroundColor = '#fd7e14';
+                        clickedButton.style.borderColor = '#fd7e14';
                         break;
                 }
             }
