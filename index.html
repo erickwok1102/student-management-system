@@ -183,6 +183,26 @@
             animation: checkMarkAppear 0.3s ease !important;
         }
         
+        .attendance-choice-btn .btn-check {
+            display: none;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            animation: checkMarkAppear 0.3s ease;
+        }
+        
+        .attendance-choice-btn.selected .btn-check {
+            display: inline;
+        }
+        
+        .attendance-choice-btn {
+            position: relative;
+        }
+        
         @keyframes checkMarkAppear {
             0% { 
                 transform: scale(0) rotate(180deg); 
@@ -1040,8 +1060,60 @@
             }
         }
 
+        // 載入現有的出席記錄
+        async function loadExistingAttendance(date, className) {
+            try {
+                console.log('🔍 載入現有出席記錄 - 日期:', date, '班別:', className);
+                
+                // 檢查是否為 Vercel 部署版本
+                const isVercel = window.location.hostname.includes('vercel.app');
+                const apiUrl = isVercel ? '/api/get-attendance' : window.location.origin + '/api/get-attendance';
+                
+                const response = await fetch(`${apiUrl}?date=${encodeURIComponent(date)}&className=${encodeURIComponent(className)}`, {
+                    method: 'GET',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('📋 出席記錄 API 回應:', result);
+                
+                if (result.success) {
+                    console.log(`✅ 載入到 ${result.count} 筆出席記錄`);
+                    return result.attendance || [];
+                } else {
+                    throw new Error(result.error || '載入出席記錄失敗');
+                }
+                
+            } catch (error) {
+                console.error('❌ 載入現有出席記錄失敗:', error);
+                // 如果 API 失敗，嘗試從本地存儲載入
+                try {
+                    const localData = localStorage.getItem('todayAttendance');
+                    if (localData) {
+                        const attendanceArray = JSON.parse(localData);
+                        const filtered = attendanceArray.filter(record => 
+                            record.date === date && record.className === className
+                        );
+                        console.log(`📱 從本地載入到 ${filtered.length} 筆記錄`);
+                        return filtered;
+                    }
+                } catch (localError) {
+                    console.error('❌ 本地載入也失敗:', localError);
+                }
+                
+                // 如果都失敗了，返回空陣列
+                return [];
+            }
+        }
+
         // 開始點名
-        function startAttendance() {
+        async function startAttendance() {
             const date = document.getElementById('attendanceDate').value;
             const className = document.getElementById('attendanceClass').value;
             
@@ -1085,7 +1157,7 @@
             console.log(`✅ 找到 ${activeStudents.length} 位在讀學員`);
             
             // 顯示點名列表（只顯示在讀學員）
-            displayAttendanceList(activeStudents);
+            await displayAttendanceList(activeStudents);
             document.getElementById('attendanceListCard').style.display = 'block';
             
             // 設置點名按鈕事件監聽器
@@ -1096,51 +1168,82 @@
         }
         
         // 顯示點名列表
-        function displayAttendanceList(classStudents) {
+        async function displayAttendanceList(classStudents) {
             const container = document.getElementById('attendanceStudentsList');
             
             // 清空臨時選擇
             tempAttendanceChoices = {};
             
-            container.innerHTML = classStudents.map(student => `
+            // 先載入當日的出席記錄
+            let existingAttendance = {};
+            try {
+                const attendanceData = await loadExistingAttendance(currentAttendanceDate, currentAttendanceClass);
+                // 將記錄轉換為 studentId -> status 的映射
+                attendanceData.forEach(record => {
+                    existingAttendance[record.studentId] = record.status;
+                });
+                console.log('🔍 載入到現有出席記錄:', existingAttendance);
+            } catch (error) {
+                console.log('⚠️ 載入現有出席記錄失敗，使用新的點名:', error.message);
+            }
+            
+            container.innerHTML = classStudents.map(student => {
+                // 檢查該學員是否已有出席記錄
+                const existingStatus = existingAttendance[student.id];
+                
+                return `
                 <div class="student-attendance-item">
                     <div class="student-info">
                         <div class="student-name">
                             ${student.name}
                             ${student.nickname ? `<span style="color: #999; font-size: 14px;">(${student.nickname})</span>` : ''}
+                            ${existingStatus ? `<span style="color: #666; font-size: 12px; margin-left: 8px;">[已點名: ${existingStatus}]</span>` : ''}
                         </div>
                         <div class="student-class">
                             班別: ${student.class}
                         </div>
                     </div>
                     <div class="attendance-buttons">
-                        <button class="attendance-choice-btn btn btn-success" 
+                        <button class="attendance-choice-btn btn btn-success ${existingStatus === '出席' ? 'selected' : ''}" 
                                 onclick="selectAttendanceStatus('${student.id}', '出席', this)"
                                 data-student-id="${student.id}" 
                                 data-status="出席" 
-                                title="出席">
-                            出席
+                                title="出席"
+                                style="${existingStatus === '出席' ? 'background-color: #198754; border-color: #146c43;' : ''}">
+                            <span class="btn-text">出席</span>
+                            <span class="btn-check">✓</span>
                         </button>
-                        <button class="attendance-choice-btn btn btn-danger" 
+                        <button class="attendance-choice-btn btn btn-danger ${existingStatus === '缺席' ? 'selected' : ''}" 
                                 onclick="selectAttendanceStatus('${student.id}', '缺席', this)"
                                 data-student-id="${student.id}" 
                                 data-status="缺席" 
-                                title="缺席">
-                            缺席
+                                title="缺席"
+                                style="${existingStatus === '缺席' ? 'background-color: #dc3545; border-color: #dc3545;' : ''}">
+                            <span class="btn-text">缺席</span>
+                            <span class="btn-check">✓</span>
                         </button>
-                        <button class="attendance-choice-btn btn btn-warning" 
+                        <button class="attendance-choice-btn btn btn-warning ${existingStatus === '遲到' ? 'selected' : ''}" 
                                 onclick="selectAttendanceStatus('${student.id}', '遲到', this)"
                                 data-student-id="${student.id}" 
                                 data-status="遲到" 
-                                title="遲到">
-                            遲到
+                                title="遲到"
+                                style="${existingStatus === '遲到' ? 'background-color: #fd7e14; border-color: #fd7e14;' : ''}">
+                            <span class="btn-text">遲到</span>
+                            <span class="btn-check">✓</span>
                         </button>
                     </div>
                 </div>
-            `).join('');
+                `;
+            }).join('');
             
-            console.log('✅ 點名列表已生成（手機友好佈局）');
+            // 將現有記錄預載到臨時選擇中
+            Object.keys(existingAttendance).forEach(studentId => {
+                tempAttendanceChoices[studentId] = existingAttendance[studentId];
+            });
+            
+            console.log('✅ 點名列表已生成（含現有記錄預選）');
             console.log('學員列表:', classStudents.map(s => ({ id: s.id, name: s.name })));
+            console.log('預載的記錄:', tempAttendanceChoices);
         }
 
         // 選擇出席狀態（只更新界面，不立即儲存）
@@ -1153,10 +1256,10 @@
             tempAttendanceChoices[studentId] = status;
             console.log('目前臨時選擇:', tempAttendanceChoices);
             
-            // 更新該學員的按鈕視覺狀態
+            // 更新該學員的按鈕視覺狀態 - 同一人只能3選1
             const studentButtons = document.querySelectorAll(`button[data-student-id="${studentId}"]`);
             
-            // 重置所有按鈕
+            // 重置該學員的所有按鈕狀態
             studentButtons.forEach(btn => {
                 btn.classList.remove('selected');
                 btn.style.backgroundColor = '';
@@ -1165,11 +1268,9 @@
                 btn.style.boxShadow = '';
             });
             
-            // 設定選中按鈕的樣式
+            // 設定選中按鈕的樣式並顯示勾號
             if (clickedButton) {
                 clickedButton.classList.add('selected');
-                clickedButton.style.transform = 'scale(0.9)';
-                clickedButton.style.boxShadow = '0 0 0 3px rgba(13, 110, 253, 0.25)';
                 
                 // 根據狀態設定顏色
                 switch(status) {
@@ -1192,7 +1293,7 @@
             const student = students.find(s => s.id === studentId);
             const studentName = student ? student.name : `學員${studentId}`;
             
-            showNotification(`${studentName}: ${status}`, 'success');
+            showNotification(`${studentName}: ${status} ✓`, 'success');
             
             // 更新儲存按鈕狀態
             updateSaveButtonStatus();
