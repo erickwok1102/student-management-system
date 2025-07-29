@@ -108,7 +108,7 @@ function getStudents() {
       });
     }
 
-    // 處理學員數據
+    // 處理學員數據 - 使用固定欄位格式
     const headers = data[0];
     console.log('標題行:', headers);
     
@@ -121,12 +121,27 @@ function getStudents() {
         continue;
       }
       
-      const student = {};
-      headers.forEach((header, index) => {
-        student[header] = row[index] || '';
-      });
+      // 使用固定的欄位對應，確保與前端一致
+      const student = {
+        id: row[0] ? row[0].toString() : '',
+        name: row[1] ? row[1].toString() : '',
+        nickname: row[2] ? row[2].toString() : '',
+        class: row[3] ? row[3].toString() : '',
+        phone: row[4] ? row[4].toString() : '',
+        email: row[5] ? row[5].toString() : '',
+        birthday: row[6] ? row[6].toString() : '',
+        emergencyContact: row[7] ? row[7].toString() : '',
+        emergencyPhone: row[8] ? row[8].toString() : '',
+        status: row[9] ? row[9].toString() : '在讀',
+        remarks: row[10] ? row[10].toString() : '',
+        createdAt: row[11] ? row[11].toString() : ''
+      };
       
-      students.push(student);
+      // 只添加有姓名的學員
+      if (student.name) {
+        students.push(student);
+        console.log(`學員 ${i}: ${student.name} (${student.class})`);
+      }
     }
 
     console.log('處理後的學員數量:', students.length);
