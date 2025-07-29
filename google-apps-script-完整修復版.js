@@ -310,33 +310,54 @@ function getAttendance(date, className) {
     }
 
     // 處理數據 (跳過標題行)
+    // 根據實際 Google Sheets 格式：A=日期, B=班別, C=學員ID, D=學員姓名, E=出席狀態
     const attendance = [];
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      const recordDate = row[0] ? row[0].toString() : '';
+      // 處理日期格式 - 可能是 Date 對象或字串
+      let recordDate = '';
+      if (row[0]) {
+        if (row[0] instanceof Date) {
+          recordDate = row[0].toLocaleDateString('zh-TW').replace(/\//g, '-');
+          // 轉換為 YYYY-MM-DD 格式
+          const parts = recordDate.split('-');
+          if (parts.length === 3) {
+            recordDate = `${parts[0]}-${parts[1].padStart(2, '0')}-${parts[2].padStart(2, '0')}`;
+          }
+        } else {
+          recordDate = row[0].toString();
+        }
+      }
+      
       const recordClass = row[1] ? row[1].toString() : '';
+      const studentId = row[2] ? row[2].toString() : '';
+      const studentName = row[3] ? row[3].toString() : '';
+      const status = row[4] ? row[4].toString() : '';
+      
+      console.log(`處理記錄 ${i}: 日期=${recordDate}, 班別=${recordClass}, 學員ID=${studentId}, 狀態=${status}`);
       
       // 如果指定了日期和班別，則過濾匹配的記錄
       if (date && className) {
+        console.log(`比較: 目標日期=${date}, 記錄日期=${recordDate}, 目標班別=${className}, 記錄班別=${recordClass}`);
         if (recordDate === date && recordClass === className) {
-          attendance.push({
+          const record = {
             date: recordDate,
             className: recordClass,
-            studentId: row[2] ? row[2].toString() : '',
-            studentName: row[3] ? row[3].toString() : '',
-            status: row[4] ? row[4].toString() : '',
-            timestamp: row[5] ? row[5].toString() : ''
-          });
+            studentId: studentId,
+            studentName: studentName,
+            status: status
+          };
+          attendance.push(record);
+          console.log(`✅ 匹配記錄:`, record);
         }
       } else {
         // 如果沒有指定過濾條件，返回所有記錄
         attendance.push({
           date: recordDate,
           className: recordClass,
-          studentId: row[2] ? row[2].toString() : '',
-          studentName: row[3] ? row[3].toString() : '',
-          status: row[4] ? row[4].toString() : '',
-          timestamp: row[5] ? row[5].toString() : ''
+          studentId: studentId,
+          studentName: studentName,
+          status: status
         });
       }
     }
