@@ -1067,7 +1067,11 @@
                 
                 // 檢查是否為 Vercel 部署版本
                 const isVercel = window.location.hostname.includes('vercel.app');
-                const apiUrl = isVercel ? '/api/get-attendance' : window.location.origin + '/api/get-attendance';
+                const apiUrl = isVercel ? '/api/get-attendance' : '/api/get-attendance';
+                
+                console.log('🌐 API URL:', apiUrl);
+                console.log('🏠 當前域名:', window.location.hostname);
+                console.log('🚀 是否為 Vercel:', isVercel);
                 
                 const response = await fetch(`${apiUrl}?date=${encodeURIComponent(date)}&className=${encodeURIComponent(className)}`, {
                     method: 'GET',
@@ -1085,14 +1089,48 @@
                 
                 if (result.success) {
                     console.log(`✅ 載入到 ${result.count} 筆出席記錄`);
+                    console.log('📋 詳細記錄內容:', result.attendance);
+                    
+                    // 檢查記錄格式
+                    if (result.attendance && result.attendance.length > 0) {
+                        console.log('🔍 第一筆記錄格式:', result.attendance[0]);
+                    }
+                    
                     return result.attendance || [];
                 } else {
+                    console.error('❌ API 返回錯誤:', result.error);
                     throw new Error(result.error || '載入出席記錄失敗');
                 }
                 
             } catch (error) {
                 console.error('❌ 載入現有出席記錄失敗:', error);
-                // 如果 API 失敗，嘗試從本地存儲載入
+                
+                // 如果 API 失敗，嘗試直接調用 Google Apps Script
+                try {
+                    console.log('🔄 嘗試直接調用 Google Apps Script...');
+                    // 使用系統中已定義的 Google Apps Script URL
+                    
+                    const directUrl = `${GOOGLE_APPS_SCRIPT_URL}?action=getAttendance&date=${encodeURIComponent(date)}&className=${encodeURIComponent(className)}`;
+                    console.log('🌐 直接調用 URL:', directUrl);
+                    
+                    const directResponse = await fetch(directUrl, {
+                        method: 'GET',
+                        redirect: 'follow'
+                    });
+                    
+                    if (directResponse.ok) {
+                        const directResult = await directResponse.json();
+                        console.log('📋 直接調用 Google Apps Script 成功:', directResult);
+                        
+                        if (directResult.success) {
+                            return directResult.attendance || [];
+                        }
+                    }
+                } catch (directError) {
+                    console.error('❌ 直接調用 Google Apps Script 也失敗:', directError);
+                }
+                
+                // 如果還是失敗，嘗試從本地存儲載入
                 try {
                     const localData = localStorage.getItem('todayAttendance');
                     if (localData) {
@@ -1108,6 +1146,7 @@
                 }
                 
                 // 如果都失敗了，返回空陣列
+                console.log('📝 所有載入方式都失敗，使用空記錄');
                 return [];
             }
         }
@@ -1177,14 +1216,26 @@
             // 先載入當日的出席記錄
             let existingAttendance = {};
             try {
+                console.log('📅 準備載入出席記錄 - 日期:', currentAttendanceDate, '班別:', currentAttendanceClass);
                 const attendanceData = await loadExistingAttendance(currentAttendanceDate, currentAttendanceClass);
+                console.log('📋 從API獲得的出席記錄原始數據:', attendanceData);
+                
                 // 將記錄轉換為 studentId -> status 的映射
                 attendanceData.forEach(record => {
+                    console.log('處理記錄:', record);
                     existingAttendance[record.studentId] = record.status;
                 });
-                console.log('🔍 載入到現有出席記錄:', existingAttendance);
+                console.log('🔍 載入到現有出席記錄映射:', existingAttendance);
+                
+                if (Object.keys(existingAttendance).length > 0) {
+                    console.log('✅ 找到現有出席記錄，將預選狀態');
+                } else {
+                    console.log('📝 沒有找到現有出席記錄，將進行新的點名');
+                }
             } catch (error) {
-                console.log('⚠️ 載入現有出席記錄失敗，使用新的點名:', error.message);
+                console.error('⚠️ 載入現有出席記錄失敗:', error);
+                console.log('⚠️ 錯誤詳情:', error.message);
+                console.log('🔄 使用新的點名模式');
             }
             
             container.innerHTML = classStudents.map(student => {
