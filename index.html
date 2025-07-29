@@ -235,15 +235,15 @@
                 <span style="font-size: 16px;">系統狀態:</span>
                 <span class="status-indicator status-online" id="serverStatus"></span>
                 <span id="statusText" style="font-weight: 600;">正常運行</span>
-            </div>
-        </div>
+                    </div>
+                </div>
 
         <!-- 標籤頁導航 -->
         <div class="tabs">
             <button class="tab active" onclick="showTab('students', this)">👥 新增學員</button>
             <button class="tab" onclick="showTab('attendance', this)">✅ 點名系統</button>
             <button class="tab" onclick="showTab('sync', this)">☁️ 雲端同步</button>
-        </div>
+            </div>
 
         <!-- 學員管理標籤 -->
         <div id="studentsTab" class="tab-content active">
@@ -253,26 +253,26 @@
                     <div class="form-group">
                         <label>學員姓名 *</label>
                         <input type="text" id="studentName" placeholder="請輸入學員姓名" required>
-                    </div>
+            </div>
                     <div class="form-group">
                         <label>別名/英文名</label>
                         <input type="text" id="studentNickname" placeholder="別名或英文名 (選填)">
-                    </div>
+            </div>
                     <div class="form-group">
                         <label>班別 *</label>
                         <input type="text" id="studentClass" placeholder="請輸入班別名稱" list="classDatalist" required>
                         <datalist id="classDatalist">
                             <!-- 班別選項會動態載入 -->
                         </datalist>
-                    </div>
+            </div>
                     <div class="form-group">
                         <label>聯絡電話</label>
                         <input type="tel" id="studentPhone" placeholder="聯絡電話">
-                    </div>
+            </div>
                     <div class="form-group">
                         <label>電子信箱</label>
                         <input type="email" id="studentEmail" placeholder="電子信箱">
-                    </div>
+            </div>
                     <div class="form-group">
                         <label>狀態</label>
                         <select id="studentStatus">
@@ -281,7 +281,7 @@
                             <option value="畢業">畢業</option>
                             <option value="退學">退學</option>
                         </select>
-                    </div>
+                </div>
                 </div>
                 <div class="form-group">
                     <label>備註</label>
@@ -292,17 +292,17 @@
                     <button class="btn btn-primary" onclick="loadStudents()">🔄 重新載入</button>
                     <button class="btn btn-warning" onclick="clearForm()">🧹 清空表單</button>
                 </div>
-            </div>
+                </div>
 
             <div class="card">
                 <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
                 <div class="student-list" id="studentList">
                     <div class="empty-state">
                         <h3>🔄 載入中...</h3>
-                    </div>
+                </div>
                 </div>
             </div>
-        </div>
+                </div>
 
         <!-- 點名系統標籤 -->
         <div id="attendanceTab" class="tab-content">
@@ -321,12 +321,12 @@
                             <!-- 班別選項將從學員資料中動態載入 -->
                         </select>
                     </div>
-                </div>
+                        </div>
 
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
+                    </div>
                 </div>
-            </div>
 
             <!-- 點名列表 -->
             <div class="card" id="attendanceListCard" style="display: none;">
@@ -335,8 +335,8 @@
                 <div style="margin-top: 30px; text-align: center;">
                     <button class="btn btn-success" onclick="saveAttendance()">💾 儲存點名記錄</button>
                     <button class="btn btn-warning" onclick="resetAttendance()">🔄 重新點名</button>
-                </div>
-            </div>
+                        </div>
+                        </div>
 
             <!-- 今日點名記錄 -->
             <div class="card">
@@ -345,10 +345,10 @@
                     <div class="empty-state">
                         <h3>📝 還沒有今日的點名記錄</h3>
                         <p>選擇班別並開始點名</p>
+                        </div>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
 
         <!-- 雲端同步標籤 -->
         <div id="syncTab" class="tab-content">
@@ -364,17 +364,17 @@
                             將本地學員資料上傳到 Google Sheets<br>
                             <strong>注意：</strong>會覆蓋雲端現有資料
                         </p>
-                    </div>
+                </div>
                     <div class="sync-card">
                         <h4 style="color: #007bff; margin-bottom: 20px; font-size: 20px;">📥 載入學員資料</h4>
                         <button class="btn btn-primary" onclick="loadFromCloud()" style="width: 100%; margin-bottom: 20px;">
                             📥 從雲端載入學員
-                        </button>
+                    </button>
                         <p style="font-size: 14px; color: #666; line-height: 1.6;">
                             從 Google Sheets 載入學員資料<br>
                             <strong>注意：</strong>會覆蓋本地現有資料
                         </p>
-                    </div>
+                </div>
                     <div class="sync-card">
                         <h4 style="color: #ffc107; margin-bottom: 20px; font-size: 20px;">📋 點名記錄</h4>
                         <button class="btn btn-warning" onclick="syncAttendanceToCloud()" style="width: 100%; margin-bottom: 10px;">
@@ -393,10 +393,10 @@
                 <div style="margin-top: 40px; padding: 25px; background: rgba(248,249,250,0.8); border-radius: 15px;">
                     <h4 style="color: #333; margin-bottom: 15px; font-size: 18px;">📋 同步狀態</h4>
                     <p id="syncStatus" style="color: #666; font-size: 16px;">系統已啟動，準備就緒</p>
+                    </div>
+                    </div>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
     <!-- 通知元素 -->
     <div id="notification" class="notification"></div>
@@ -547,7 +547,7 @@
                         <div style="font-size: 20px; font-weight: 700; margin-bottom: 8px; color: #333;">
                             ${student.name}
                             ${student.nickname ? `<span style="color: #666; font-weight: 400; font-size: 16px;">(${student.nickname})</span>` : ''}
-                        </div>
+                </div>
                         <div style="color: #666; font-size: 15px; margin-bottom: 5px;">
                             <span style="margin-right: 20px; background: #e3f2fd; padding: 4px 12px; border-radius: 20px; color: #1976d2;">
                                 📚 ${student.class || '未分配班別'}
@@ -561,14 +561,14 @@
                             ${student.phone ? ` | 📞 ${student.phone}` : ''}
                             ${student.email ? ` | 📧 ${student.email}` : ''}
                         </div>
-                    </div>
+                        </div>
                     <div>
                         <button class="btn btn-danger" onclick="deleteStudent('${student.id}')" 
                                 title="刪除學員" style="padding: 10px 15px;">
                             🗑️
                         </button>
-                    </div>
-                </div>
+                        </div>
+                        </div>
             `).join('');
         }
 
@@ -809,7 +809,7 @@
                         <div style="font-size: 14px; color: #666;">
                             班別: ${student.class}
                         </div>
-                    </div>
+                </div>
                     <div style="display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;">
                         <button class="attendance-choice-btn btn btn-success" 
                                 onclick="selectAttendanceStatus('${student.id}', '出席', this)"
@@ -835,8 +835,8 @@
                             <span class="btn-text">⏰ 遲到</span>
                             <span class="check-mark" style="display: none; position: absolute; top: -5px; right: -5px; background: #fff; border-radius: 50%; width: 20px; height: 20px; color: #007bff; font-size: 14px; line-height: 20px;">✓</span>
                         </button>
-                    </div>
                 </div>
+            </div>
             `).join('');
             
             console.log('✅ 點名列表已生成');
@@ -1149,7 +1149,7 @@
                     <div class="empty-state">
                         <h3>📝 還沒有今日的點名記錄</h3>
                         <p>選擇班別並開始點名</p>
-                    </div>
+        </div>
                 `;
                 return;
             }
@@ -1177,20 +1177,20 @@
                                         <span style="color: ${getAttendanceColor(att.status)}; font-weight: 600; margin-left: 10px;">
                                             ${getAttendanceIcon(att.status)} ${att.status}
                                         </span>
-                                    </div>
+                </div>
                                     <div style="color: #999; font-size: 13px;">
                                         📝 ${att.createdAt}
-                                    </div>
-                                </div>
+                        </div>
+                        </div>
                                 <div>
                                     <button class="btn btn-danger" onclick="deleteAttendance('${att.id}')" 
                                             title="刪除記錄" style="padding: 8px 12px; font-size: 12px;">
                                         🗑️
                                     </button>
-                                </div>
-                            </div>
+                        </div>
+                        </div>
                         `).join('')}
-                    </div>
+                        </div>
                 `;
             });
             
@@ -1233,4 +1233,4 @@
         }
     </script>
 </body>
-</html>
+</html> 

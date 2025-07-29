@@ -22,6 +22,8 @@ function doGet(e) {
         return getClasses();
       case 'getSchedule':
         return getSchedule();
+      case 'getAttendance':
+        return getAttendance(e.parameter.date, e.parameter.className);
       default:
         return createResponse({
           success: false,
@@ -272,6 +274,83 @@ function getSchedule() {
 
   } catch (error) {
     console.error('獲取課程資料失敗:', error);
+    return createResponse({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
+// 獲取出席記錄（根據日期和班別）
+function getAttendance(date, className) {
+  try {
+    console.log('開始獲取出席記錄 - 日期:', date, '班別:', className);
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEETS.ATTENDANCE);
+    
+    if (!sheet) {
+      console.log('出席記錄工作表不存在，返回空陣列');
+      return createResponse({
+        success: true,
+        attendance: [],
+        count: 0
+      });
+    }
+
+    const data = sheet.getDataRange().getValues();
+    console.log('讀取到出席數據:', data.length, '行');
+    
+    if (data.length <= 1) {
+      console.log('沒有出席數據，返回空陣列');
+      return createResponse({
+        success: true,
+        attendance: [],
+        count: 0
+      });
+    }
+
+    // 處理數據 (跳過標題行)
+    const attendance = [];
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const recordDate = row[0] ? row[0].toString() : '';
+      const recordClass = row[1] ? row[1].toString() : '';
+      
+      // 如果指定了日期和班別，則過濾匹配的記錄
+      if (date && className) {
+        if (recordDate === date && recordClass === className) {
+          attendance.push({
+            date: recordDate,
+            className: recordClass,
+            studentId: row[2] ? row[2].toString() : '',
+            studentName: row[3] ? row[3].toString() : '',
+            status: row[4] ? row[4].toString() : '',
+            timestamp: row[5] ? row[5].toString() : ''
+          });
+        }
+      } else {
+        // 如果沒有指定過濾條件，返回所有記錄
+        attendance.push({
+          date: recordDate,
+          className: recordClass,
+          studentId: row[2] ? row[2].toString() : '',
+          studentName: row[3] ? row[3].toString() : '',
+          status: row[4] ? row[4].toString() : '',
+          timestamp: row[5] ? row[5].toString() : ''
+        });
+      }
+    }
+
+    console.log('成功解析出席數據:', attendance.length, '筆');
+    return createResponse({
+      success: true,
+      attendance: attendance,
+      count: attendance.length,
+      query: { date: date, className: className }
+    });
+    
+  } catch (error) {
+    console.error('獲取出席記錄錯誤:', error);
     return createResponse({
       success: false,
       error: error.toString()

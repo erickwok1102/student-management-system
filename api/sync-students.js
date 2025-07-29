@@ -17,7 +17,7 @@ export default async function handler(req, res) {
             });
         }
 
-        const { students } = req.body;
+        const { students, action } = req.body;
 
         if (!students || !Array.isArray(students)) {
             return res.status(400).json({ 
@@ -26,6 +26,14 @@ export default async function handler(req, res) {
             });
         }
 
+        console.log('收到的action:', action);
+        console.log('學員數量:', students.length);
+
+        // 決定要使用的action - 預設為appendStudent來避免覆蓋資料
+        const apiAction = action === 'syncStudents' ? 'syncStudents' : 'appendStudent';
+        
+        console.log('使用的API action:', apiAction);
+
         // 呼叫 Google Apps Script (添加 redirect: 'follow' 處理 302 重定向)
         const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
             method: 'POST',
@@ -33,7 +41,7 @@ export default async function handler(req, res) {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-                action: 'syncStudents',
+                action: apiAction,
                 students: students
             }),
             redirect: 'follow'
