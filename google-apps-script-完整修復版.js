@@ -121,7 +121,7 @@ function getStudents() {
         continue;
       }
       
-      // 使用固定的欄位對應，確保與前端一致
+      // 使用固定的欄位對應，與 Google Sheets 標題一致
       const student = {
         id: row[0] ? row[0].toString() : '',
         name: row[1] ? row[1].toString() : '',
@@ -130,8 +130,8 @@ function getStudents() {
         phone: row[4] ? row[4].toString() : '',
         email: row[5] ? row[5].toString() : '',
         birthday: row[6] ? row[6].toString() : '',
-        emergencyContact: row[7] ? row[7].toString() : '',
-        emergencyPhone: row[8] ? row[8].toString() : '',
+        emergency_contact: row[7] ? row[7].toString() : '',
+        emergency_phone: row[8] ? row[8].toString() : '',
         status: row[9] ? row[9].toString() : '在讀',
         remarks: row[10] ? row[10].toString() : '',
         createdAt: row[11] ? row[11].toString() : ''

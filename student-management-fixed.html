@@ -1003,7 +1003,14 @@
                 const result = await response.json();
                 
                 if (result.success && result.students) {
-                    students = result.students;
+                    // 映射欄位名稱：將 Google Sheets 的 snake_case 轉為前端的 camelCase
+                    const mappedStudents = result.students.map(student => ({
+                        ...student,
+                        emergencyContact: student.emergency_contact || '',
+                        emergencyPhone: student.emergency_phone || ''
+                    }));
+                    
+                    students = mappedStudents;
                     localStorage.setItem('studentData', JSON.stringify(students));
                     displayStudents();
                     updateClassOptions();
@@ -1031,7 +1038,14 @@
                 
                 if (result.success && result.students && result.students.length > 0) {
                     if (result.students.length >= students.length) {
-                        students = result.students;
+                        // 映射欄位名稱：將 Google Sheets 的 snake_case 轉為前端的 camelCase
+                        const mappedStudents = result.students.map(student => ({
+                            ...student,
+                            emergencyContact: student.emergency_contact || '',
+                            emergencyPhone: student.emergency_phone || ''
+                        }));
+                        
+                        students = mappedStudents;
                         localStorage.setItem('studentData', JSON.stringify(students));
                         displayStudents();
                         updateClassOptions();
@@ -1829,10 +1843,17 @@
                 const result = await response.json();
                 
                 if (result.success && result.students) {
-                    displayStudents(result.students);
-                    updateStatistics(result.students);
-                    console.log('✅ 成功載入學員列表:', result.students.length, '筆資料');
-                    showNotification(`✅ 已載入 ${result.students.length} 筆學員資料`, 'success');
+                    // 映射欄位名稱：將 Google Sheets 的 snake_case 轉為前端的 camelCase
+                    const mappedStudents = result.students.map(student => ({
+                        ...student,
+                        emergencyContact: student.emergency_contact || '',
+                        emergencyPhone: student.emergency_phone || ''
+                    }));
+                    
+                    displayStudents(mappedStudents);
+                    updateStatistics(mappedStudents);
+                    console.log('✅ 成功載入學員列表:', mappedStudents.length, '筆資料');
+                    showNotification(`✅ 已載入 ${mappedStudents.length} 筆學員資料`, 'success');
                 } else {
                     throw new Error('無法載入學員列表');
                 }
