@@ -1,12 +1,12 @@
 // 學員管理系統 Google Apps Script 完整修復版
 // 請替換以下 ID 為你的實際 Google Sheets ID
-const SPREADSHEET_ID = 'YOUR_GOOGLE_SHEETS_ID_HERE';
+const SPREADSHEET_ID = '1paCFt-QxJ3HjTrA4lOnZFQjuw2I7jh8KkTPiNSbfcoo';
 
-// 工作表名稱配置
+// 工作表名稱配置 (使用英文名稱)
 const SHEETS = {
-  STUDENTS: '學員資料',
+  STUDENTS: 'students',
   SCHEDULE: 'schedule',
-  ATTENDANCE: '出席記錄'
+  ATTENDANCE: 'attendance'
 };
 
 // 主要處理函數 - 處理 GET 請求
@@ -56,6 +56,8 @@ function doPost(e) {
     switch (action) {
       case 'syncStudents':
         return syncStudents(data.students);
+      case 'appendStudent':
+        return appendStudent(data.students);  // 新增學員函數
       case 'syncAttendance':
         return syncAttendanceFixed(data.attendance);  // 使用修復版函數
       default:
@@ -575,8 +577,82 @@ function doTest() {
     version: '完整修復版 v1.2',
     functions: [
       'doGet', 'doPost', 'getStudents', 'getClasses', 'getSchedule', 
-      'syncStudents', 'syncAttendanceFixed', 'syncAttendance (備用)', 
+      'syncStudents', 'appendStudent', 'syncAttendanceFixed', 'syncAttendance (備用)', 
       'testScript', 'doTest'
     ]
   });
+}
+
+// 🆕 新增學員函數 - 只添加新行，不覆蓋現有資料
+function appendStudent(students) {
+  try {
+    console.log('開始新增學員，數量:', students ? students.length : 0);
+    
+    if (!students || !Array.isArray(students)) {
+      throw new Error('無效的學員資料格式');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    let sheet = spreadsheet.getSheetByName(SHEETS.STUDENTS);
+    
+    // 如果工作表不存在，創建它並添加標題行
+    if (!sheet) {
+      console.log('創建學員資料工作表');
+      sheet = spreadsheet.insertSheet(SHEETS.STUDENTS);
+      
+      // 添加標題行
+      const headers = [
+        'id', 'name', 'nickname', 'class', 'phone', 'email', 'birthday',
+        'emergency_contact', 'emergency_phone', 'status', 'remarks', 'createdAt'
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+
+    // 檢查是否已有標題行
+    const existingData = sheet.getDataRange().getValues();
+    if (existingData.length === 0) {
+      // 如果完全空白，添加標題行
+      const headers = [
+        'id', 'name', 'nickname', 'class', 'phone', 'email', 'birthday',
+        'emergency_contact', 'emergency_phone', 'status', 'remarks', 'createdAt'
+      ];
+      sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    }
+
+    // 添加新學員資料（使用 appendRow 避免覆蓋）
+    students.forEach(student => {
+      const rowData = [
+        student.id || '',
+        student.name || '',
+        student.nickname || '',
+        student.class || '',
+        student.phone || '',
+        student.email || '',
+        student.birthday || '',
+        student.emergencyContact || student.emergency_contact || '',  // 支援兩種欄位名稱
+        student.emergencyPhone || student.emergency_phone || '',      // 支援兩種欄位名稱
+        student.status || '在讀',
+        student.remarks || '',
+        student.createdAt || new Date().toLocaleDateString('zh-TW')
+      ];
+      
+      sheet.appendRow(rowData);
+      console.log(`新增學員: ${student.name} (${student.class})`);
+    });
+
+    console.log(`成功新增 ${students.length} 位學員`);
+
+    return createResponse({
+      success: true,
+      count: students.length,
+      message: `成功新增 ${students.length} 位學員`
+    });
+
+  } catch (error) {
+    console.error('新增學員失敗:', error);
+    return createResponse({
+      success: false,
+      error: error.toString()
+    });
+  }
 } 
