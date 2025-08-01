@@ -499,29 +499,20 @@
         // 全域變數 - 用於臨時儲存點名選擇
         let tempAttendanceChoices = {}; // 格式: { studentId: status }
 
-        // 初始化
+        // 初始化 (合併所有載入邏輯)
         document.addEventListener('DOMContentLoaded', async () => {
-            console.log('🚀 學員管理系統啟動中...');
+            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
             showNotification('歡迎使用學員管理系統！', 'success');
             
-            await loadStudents();
-            updateClassOptions(); // 從學員資料中更新班別選項
-            await loadFromCloudSilently();
-            
-            // 自動從課程表載入班別
-            try {
-                await loadClassesFromSchedule();
-            } catch (error) {
-                console.log('📅 自動載入課程表班別失敗，將使用學員資料中的班別');
-            }
+            // 載入學員和班別資料
+            fetchClassList();
+            await loadStudentsFromCloud();
             
             // 設定預設日期為今天
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
             
             // 設置點名按鈕事件監聽器
             setupAttendanceButtons();
-            
-            loadTodayAttendance();
         });
 
         // 標籤頁切換
@@ -1715,12 +1706,7 @@
             showNotification(`📄 學員清單已匯出 (${students.length} 筆資料)`, 'success');
         }
 
-        // 頁面載入時執行 (簡化版，移除無用代碼)
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
-            fetchClassList();
-            loadStudentsFromCloud();
-        });
+        // 第二個 DOMContentLoaded 已移除，避免重複載入
 
         // 格式化生日日期顯示
         function formatBirthday(dateString) {
