@@ -338,15 +338,19 @@
                     </div>
                     <div class="form-group">
                         <label>班別 *</label>
-                        <select id="attendanceClass" required>
+                        <select id="attendanceClass" required disabled>
                             <option value="">請選擇班別</option>
                             <!-- 班別選項將從學員資料中動態載入 -->
                         </select>
                     </div>
                 </div>
 
-                <div style="margin-top: 30px; text-align: center;">
-                    <button class="btn btn-primary" onclick="startAttendance()">🚀 開始點名</button>
+                <div style="margin-top: 20px; color: #666; font-size: 14px;">
+                    步驟：先選日期 → 再選班別 → 最後開始點名
+                </div>
+
+                <div style="margin-top: 20px; text-align: center;">
+                    <button class="btn btn-primary" id="startAttendanceBtn" onclick="startAttendance()" disabled>🚀 開始點名</button>
                 </div>
             </div>
 
@@ -426,6 +430,9 @@
 
             <div class="card">
                 <h3 style="margin-bottom: 25px; color: #333; font-size: 24px;">📋 學員列表</h3>
+                <div style="margin-bottom: 15px; text-align: right;">
+                    <button class="btn btn-primary" onclick="saveStudentsToCloud()">💾 儲存學員變更到雲端</button>
+                </div>
                 <div class="student-list" id="studentList">
                     <div class="empty-state">
                         <h3>🔄 載入中...</h3>
@@ -510,6 +517,7 @@
             
             // 設定預設日期為今天
             document.getElementById('attendanceDate').value = new Date().toISOString().split('T')[0];
+            initAttendanceFlowControls();
             
             // 設置點名按鈕事件監聽器
             setupAttendanceButtons();
@@ -818,6 +826,7 @@
             }
             
             console.log(`📚 更新班別選項: ${classNames.join(', ')}`);
+            updateAttendanceFlowControls();
         }
 
         // 從課程表載入班別
@@ -1802,12 +1811,8 @@
             }
         }
 
-        // 頁面載入時初始化
-        window.addEventListener('load', () => {
-            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
-            fetchClassList();
-            loadStudentsFromCloud();
-        });
+        // 注意：避免重複初始化
+        // 初始化已在 DOMContentLoaded 內處理，這裡不再重複呼叫，否則會造成重複打 API / 重複 log。
 
         // 從雲端載入學員列表
         async function loadStudentsFromCloud() {
@@ -1836,6 +1841,7 @@
                         emergencyPhone: student.emergency_phone || ''
                     }));
                     
+                    students = mappedStudents;
                     displayStudents(mappedStudents);
                     updateStatistics(mappedStudents);
                     console.log('✅ 成功載入學員列表:', mappedStudents.length, '筆資料');
@@ -1877,6 +1883,8 @@
                 return;
             }
 
+            const statusOptions = ['在讀', '休學', '畢業', '退學'];
+
             list.innerHTML = studentArray.map(student => `
                 <div class="student-item">
                     <div>
@@ -1892,6 +1900,15 @@
                             <span style="color: ${getStatusColor(student.status)}; font-weight: 600;">
                                 ● ${student.status}
                             </span>
+                        </div>
+                        <div style="margin-bottom: 6px;">
+                            <label style="font-size: 12px; color: #666; margin-right: 6px;">狀態</label>
+                            <select onchange="updateStudentStatus('${student.id}', this.value)" style="padding: 6px 10px; border-radius: 8px; border: 1px solid #ddd;">
+                                ${statusOptions.map(status => `
+                                    <option value="${status}" ${student.status === status ? 'selected' : ''}>${status}</option>
+                                `).join('')}
+                                ${!statusOptions.includes(student.status) && student.status ? `<option value="${student.status}" selected>${student.status}</option>` : ''}
+                            </select>
                         </div>
                         <div style="color: #999; font-size: 13px; line-height: 1.4;">
                             📅 ${student.createdAt} 建立
@@ -1913,6 +1930,97 @@
                     </div>
                 </div>
             `).join('');
+        }
+
+        // 更新學員狀態
+        function updateStudentStatus(studentId, newStatus) {
+            const target = students.find(s => s.id === studentId);
+            if (!target) return;
+            target.status = newStatus;
+            displayStudents(students);
+            updateStatistics(students);
+        }
+
+        // 儲存學員變更到雲端（覆蓋）
+        async function saveStudentsToCloud() {
+            if (!students || students.length === 0) {
+                showNotification('沒有學員資料可以儲存', 'warning');
+                return;
+            }
+
+            if (!confirm('⚠️ 此操作會覆蓋 Google Sheets 的學員資料。確定要儲存嗎？')) {
+                return;
+            }
+
+            try {
+                const payload = students.map(student => ({
+                    id: student.id || '',
+                    name: student.name || '',
+                    nickname: student.nickname || '',
+                    class: student.class || '',
+                    phone: student.phone || '',
+                    email: student.email || '',
+                    birthday: student.birthday || '',
+                    emergencyContact: student.emergencyContact || '',
+                    emergencyPhone: student.emergencyPhone || '',
+                    status: student.status || '',
+                    remarks: student.remarks || '',
+                    createdAt: student.createdAt || ''
+                }));
+
+                const response = await fetch('/api/sync-students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'syncStudents',
+                        students: payload
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${errorText}`);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showNotification(`✅ 已儲存 ${payload.length} 筆學員資料到雲端`, 'success');
+                } else {
+                    throw new Error(result.error || '儲存失敗');
+                }
+            } catch (error) {
+                console.error('儲存學員變更失敗:', error);
+                showNotification('❌ 儲存失敗：' + error.message, 'error');
+            }
+        }
+
+        // 點名流程控制：日期 -> 班別 -> 開始點名
+        let attendanceFlowInitialized = false;
+        function initAttendanceFlowControls() {
+            const dateInput = document.getElementById('attendanceDate');
+            const classSelect = document.getElementById('attendanceClass');
+            const startBtn = document.getElementById('startAttendanceBtn');
+
+            if (!dateInput || !classSelect || !startBtn) return;
+
+            if (!attendanceFlowInitialized) {
+                dateInput.addEventListener('change', updateAttendanceFlowControls);
+                classSelect.addEventListener('change', updateAttendanceFlowControls);
+                attendanceFlowInitialized = true;
+            }
+            updateAttendanceFlowControls();
+        }
+
+        function updateAttendanceFlowControls() {
+            const dateInput = document.getElementById('attendanceDate');
+            const classSelect = document.getElementById('attendanceClass');
+            const startBtn = document.getElementById('startAttendanceBtn');
+
+            if (!dateInput || !classSelect || !startBtn) return;
+
+            const hasDate = !!dateInput.value;
+            classSelect.disabled = !hasDate;
+            startBtn.disabled = !(hasDate && classSelect.value);
         }
 
         // 從雲端刪除學員

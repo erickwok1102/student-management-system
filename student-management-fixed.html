@@ -1802,12 +1802,8 @@
             }
         }
 
-        // 頁面載入時初始化
-        window.addEventListener('load', () => {
-            console.log('🚀 學員管理系統啟動 - 雲端同步模式');
-            fetchClassList();
-            loadStudentsFromCloud();
-        });
+        // 注意：避免重複初始化
+        // 初始化已在 DOMContentLoaded 內處理，這裡不再重複呼叫，否則會造成重複打 API / 重複 log。
 
         // 從雲端載入學員列表
         async function loadStudentsFromCloud() {
