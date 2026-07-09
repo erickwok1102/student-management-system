@@ -67,6 +67,8 @@ function doPost(e) {
         return appendStudent(data.students);  // 新增學員函數
       case 'syncAttendance':
         return syncAttendanceFixed(data.attendance);  // 使用修復版函數
+      case 'updateStudentStatus':
+        return updateStudentStatus(data.studentId, data.status);
       default:
         return createResponse({
           success: false,
@@ -862,4 +864,60 @@ function appendStudent(students) {
       error: error.toString()
     });
   }
-} 
+}
+
+// 更新單一學員的狀態（用 ID 搵行，只改 status 一格）
+function updateStudentStatus(studentId, status) {
+  try {
+    console.log('更新學員狀態:', studentId, '->', status);
+
+    if (!studentId || !status) {
+      throw new Error('缺少 studentId 或 status');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEETS.STUDENTS);
+
+    if (!sheet) {
+      throw new Error('學員資料工作表不存在');
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      throw new Error('沒有學員資料');
+    }
+
+    // 用標題行搵 id 同 status 欄位位置，避免欄位順序改變時出錯
+    const headers = data[0].map(h => String(h).trim().toLowerCase());
+    const idCol = headers.indexOf('id');
+    const statusCol = headers.indexOf('status');
+
+    if (idCol === -1 || statusCol === -1) {
+      throw new Error('工作表缺少 id 或 status 標題欄');
+    }
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(studentId).trim()) {
+        sheet.getRange(i + 1, statusCol + 1).setValue(status);
+        console.log(`已更新第 ${i + 1} 行學員 ${studentId} 狀態為 ${status}`);
+
+        return createResponse({
+          success: true,
+          message: `學員 ${studentId} 狀態已更新為「${status}」`,
+          studentId: studentId,
+          status: status
+        });
+      }
+    }
+
+    throw new Error(`找不到學員 ID: ${studentId}`);
+
+  } catch (error) {
+    console.error('更新學員狀態失敗:', error);
+    return createResponse({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
