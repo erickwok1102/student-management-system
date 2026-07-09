@@ -13,20 +13,31 @@ export async function GET(request) {
         const className = searchParams.get('class');
 
         const supabase = getSupabase();
-        let query = supabase
-            .from('attendance')
-            .select('*')
-            .order('date', { ascending: false })
-            .order('class')
-            .order('student_id');
 
-        if (date) query = query.eq('date', date);
-        if (from) query = query.gte('date', from);
-        if (to) query = query.lte('date', to);
-        if (className) query = query.eq('class', className);
+        // Supabase 每個請求最多返回 1000 行（伺服器端上限），所以要分頁攞齊
+        const PAGE_SIZE = 1000;
+        const data = [];
 
-        const { data, error } = await query;
-        if (error) throw error;
+        for (let page = 0; ; page++) {
+            let query = supabase
+                .from('attendance')
+                .select('*')
+                .order('date', { ascending: false })
+                .order('class')
+                .order('student_id')
+                .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+            if (date) query = query.eq('date', date);
+            if (from) query = query.gte('date', from);
+            if (to) query = query.lte('date', to);
+            if (className) query = query.eq('class', className);
+
+            const { data: batch, error } = await query;
+            if (error) throw error;
+
+            data.push(...batch);
+            if (batch.length < PAGE_SIZE) break;
+        }
 
         return Response.json({ success: true, attendance: data, count: data.length });
     } catch (error) {
