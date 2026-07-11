@@ -136,7 +136,7 @@ export default function RecordsTab({ classes }) {
                                                 : 0;
                                             return (
                                                 <tr key={row.id}>
-                                                    <td>{row.name} <span style={{ color: '#999', fontSize: 12 }}>{row.id}</span></td>
+                                                    <td>{row.name} <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>{row.id}</span></td>
                                                     <td>{row.class}</td>
                                                     <td className="record-status-出席">{row.出席}</td>
                                                     <td className="record-status-遲到">{row.遲到}</td>
@@ -173,7 +173,7 @@ export default function RecordsTab({ classes }) {
                                             <tr key={record.id}>
                                                 <td>{record.date}</td>
                                                 <td>{record.class}</td>
-                                                <td>{record.student_name} <span style={{ color: '#999', fontSize: 12 }}>{record.student_id}</span></td>
+                                                <td>{record.student_name} <span style={{ color: 'var(--text-faint)', fontSize: 12 }}>{record.student_id}</span></td>
                                                 <td className={`record-status-${record.status}`}>{record.status}</td>
                                             </tr>
                                         ))}

@@ -7,10 +7,10 @@ import { api } from '../lib/api';
 const STUDENT_STATUS = ['在讀', '休學', '畢業', '退學'];
 
 const STATUS_COLORS = {
-    '在讀': '#28a745',
-    '休學': '#ffc107',
-    '畢業': '#17a2b8',
-    '退學': '#dc3545'
+    '在讀': '#34d399',
+    '休學': '#fbbf24',
+    '畢業': '#38bdf8',
+    '退學': '#fb7185'
 };
 
 const EMPTY_FORM = {
@@ -184,10 +184,10 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
                 <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                     <input
                         type="text"
+                        className="inline-input"
                         value={newClassName}
                         placeholder="新班別名稱"
                         onChange={e => setNewClassName(e.target.value)}
-                        style={{ flex: 1, minWidth: 200, padding: '12px 16px', border: '2px solid #e1e5e9', borderRadius: 12, fontSize: 16 }}
                     />
                     <button className="btn btn-primary" onClick={addClass}>新增班別</button>
                 </div>
@@ -218,12 +218,12 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
                                 </div>
                                 <div style={{ marginBottom: 8 }}>
                                     <span className="class-pill">{student.class || '未分配班別'}</span>
-                                    <span style={{ color: STATUS_COLORS[student.status] || '#666', fontWeight: 600 }}>
+                                    <span style={{ color: STATUS_COLORS[student.status] || 'var(--text-muted)', fontWeight: 600 }}>
                                         {student.status}
                                     </span>
                                 </div>
                                 <div style={{ marginBottom: 6 }}>
-                                    <label style={{ fontSize: 12, color: '#666', marginRight: 6 }}>狀態</label>
+                                    <label style={{ fontSize: 12, color: 'var(--text-muted)', marginRight: 6 }}>狀態</label>
                                     <select
                                         className="status-select"
                                         value={student.status}

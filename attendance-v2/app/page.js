@@ -52,12 +52,10 @@ export default function Home() {
                 </div>
 
                 {loadError && (
-                    <div className="card" style={{ borderLeft: '6px solid #dc3545', background: '#fff5f5' }}>
-                        <h3 style={{ color: '#dc3545', marginBottom: 10 }}>接駁唔到資料庫</h3>
-                        <p style={{ color: '#666', lineHeight: 1.6 }}>
-                            錯誤訊息:{loadError}
-                        </p>
-                        <p style={{ color: '#666', lineHeight: 1.6, marginTop: 10 }}>
+                    <div className="card error-banner">
+                        <h3>接駁唔到資料庫</h3>
+                        <p>錯誤訊息:{loadError}</p>
+                        <p>
                             如果係第一次使用,請跟 README.md 完成 Supabase 設定:
                             建立 project → 行 schema.sql → 將 Project URL 同 service_role key
                             填入 <code>.env.local</code>(本地)或 Vercel 環境變數(線上),然後重新啟動。

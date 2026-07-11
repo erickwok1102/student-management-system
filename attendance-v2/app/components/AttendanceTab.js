@@ -153,7 +153,7 @@ export default function AttendanceTab({ classes, students }) {
                         </select>
                     </div>
                 </div>
-                <div style={{ marginTop: 10, color: '#666', fontSize: 14 }}>
+                <div className="hint-text">
                     步驟：先選日期 → 再選班別 → 最後開始點名
                 </div>
                 <div style={{ marginTop: 20, textAlign: 'center' }}>
