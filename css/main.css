@@ -1,0 +1,607 @@
+/* main.css - Attendance App Styles */
+
+/* Reset & Base */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    color: #333;
+    min-height: 100vh;
+}
+
+/* Container */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+.header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 40px;
+    border-radius: 20px;
+    margin-bottom: 30px;
+    text-align: center;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+}
+
+.header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+}
+
+.header p {
+    font-size: 1.2rem;
+    opacity: 0.9;
+}
+
+/* Cards */
+.card {
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+    padding: 30px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Buttons - Visual Hierarchy */
+.btn {
+    padding: 14px 28px;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 8px;
+    transition: all 0.3s ease;
+    font-weight: 600;
+    min-height: 44px; /* Mobile touch target */
+}
+
+/* Primary Action - Solid background with shadow */
+.btn-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    box-shadow: 0 4px 15px rgba(0,123,255,0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(0,123,255,0.4);
+}
+
+/* Success Action */
+.btn-success {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+}
+
+.btn-success:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 30px rgba(40,167,69,0.4);
+}
+
+/* Secondary Action - Light background */
+.btn-warning {
+    background: rgba(255,193,7,0.2);
+    color: #856404;
+    border: 2px solid #ffc107;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+    transform: translateY(-2px);
+}
+
+/* Danger Action - Outlined red */
+.btn-danger {
+    background: transparent;
+    color: #dc3545;
+    border: 2px solid #dc3545;
+}
+
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #555;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 15px 20px;
+    border: 2px solid #e1e5e9;
+    border-radius: 12px;
+    font-size: 16px; /* Prevent iOS zoom */
+    transition: all 0.3s ease;
+    background: rgba(255,255,255,0.8);
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 4px rgba(0,123,255,0.1);
+    background: white;
+}
+
+/* Form Validation Styles */
+.form-group input.error,
+.form-group select.error,
+.form-group textarea.error {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 4px rgba(220,53,69,0.1);
+}
+
+.form-group .error-message {
+    color: #dc3545;
+    font-size: 12px;
+    margin-top: 6px;
+    display: none;
+}
+
+.form-group .error-message.show {
+    display: block;
+}
+
+/* Student Item */
+.student-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 15px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    transition: all 0.3s ease;
+    border-left: 5px solid #007bff;
+}
+
+.student-item:hover {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+    transform: translateX(10px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+}
+
+/* Notification */
+.notification {
+    position: fixed;
+    top: 30px;
+    right: 30px;
+    padding: 20px 30px;
+    border-radius: 15px;
+    color: white;
+    font-weight: 600;
+    z-index: 1000;
+    opacity: 0;
+    transition: all 0.4s ease;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+    transform: translateY(-20px);
+}
+
+.notification.success {
+    background: linear-gradient(135deg, #28a745, #20c997);
+}
+
+.notification.error {
+    background: linear-gradient(135deg, #dc3545, #e74c3c);
+}
+
+.notification.warning {
+    background: linear-gradient(135deg, #ffc107, #f39c12);
+    color: #333;
+}
+
+.notification.info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+}
+
+.notification.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Status Indicator */
+.status-indicator {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    margin-left: 10px;
+    animation: pulse 2s infinite;
+}
+
+.status-online {
+    background: #28a745;
+    box-shadow: 0 0 15px rgba(40,167,69,0.6);
+}
+
+.status-offline {
+    background: #dc3545;
+    box-shadow: 0 0 15px rgba(220,53,69,0.6);
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    border-bottom: 3px solid #e9ecef;
+    margin-bottom: 30px;
+    background: rgba(255,255,255,0.9);
+    border-radius: 15px 15px 0 0;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.tab {
+    padding: 20px 35px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    font-size: 16px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    position: relative;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    min-height: 44px;
+}
+
+.tab.active {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.tab:not(.active):hover {
+    background: rgba(0,123,255,0.1);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: fadeIn 0.5s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Grid Layouts */
+.grid-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 25px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 25px;
+}
+
+.stat-card {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    border-left: 6px solid #007bff;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+}
+
+.sync-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.sync-card {
+    text-align: center;
+    padding: 40px;
+    border-radius: 20px;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    transition: all 0.3s ease;
+}
+
+.sync-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 40px rgba(0,0,0,0.1);
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 80px 20px;
+    color: #999;
+}
+
+.empty-state h3 {
+    margin-bottom: 15px;
+    color: #666;
+    font-size: 24px;
+}
+
+.empty-state p {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* Attendance Buttons */
+.attendance-btn,
+.attendance-choice-btn {
+    transition: all 0.3s ease !important;
+    border: 2px solid transparent !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    cursor: pointer !important;
+    min-height: 44px;
+}
+
+.attendance-btn:hover,
+.attendance-choice-btn:hover {
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2) !important;
+}
+
+.attendance-btn:active,
+.attendance-choice-btn:active {
+    transform: translateY(0) !important;
+}
+
+.attendance-btn.selected,
+.attendance-choice-btn.selected {
+    border: 3px solid #fff !important;
+    box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.25), 0 4px 12px rgba(0,0,0,0.3) !important;
+    transform: scale(0.95) !important;
+}
+
+.attendance-btn .check-mark,
+.attendance-choice-btn .check-mark {
+    animation: checkMarkAppear 0.3s ease !important;
+}
+
+.attendance-choice-btn .btn-check {
+    display: none;
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    font-weight: bold;
+    color: white;
+    animation: checkMarkAppear 0.3s ease;
+}
+
+.attendance-choice-btn.selected .btn-check {
+    display: inline;
+}
+
+.attendance-choice-btn {
+    position: relative;
+}
+
+@keyframes checkMarkAppear {
+    0% {
+        transform: scale(0) rotate(180deg);
+        opacity: 0;
+    }
+    50% {
+        transform: scale(1.2) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
+.btn-success.selected {
+    background-color: #198754 !important;
+    border-color: #146c43 !important;
+}
+
+.btn-warning.selected {
+    background-color: #fd7e14 !important;
+    border-color: #fd7e14 !important;
+}
+
+.btn-primary.selected {
+    background-color: #0d6efd !important;
+    border-color: #0a58ca !important;
+}
+
+/* Card Titles */
+.card-title {
+    margin-bottom: 25px;
+    color: #333;
+    font-size: 24px;
+}
+
+.card-subtitle {
+    color: #333;
+    margin-bottom: 20px;
+    font-size: 20px;
+}
+
+/* Sync Status */
+.sync-status {
+    margin-top: 40px;
+    padding: 25px;
+    background: rgba(248,249,250,0.8);
+    border-radius: 15px;
+}
+
+.sync-status h4 {
+    color: #333;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.sync-status p {
+    color: #666;
+    font-size: 16px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+
+    .header {
+        padding: 30px 20px;
+    }
+
+    .header h1 {
+        font-size: 2rem;
+    }
+
+    .grid-form {
+        grid-template-columns: 1fr;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 15px;
+    }
+
+    .sync-grid {
+        grid-template-columns: 1fr;
+    }
+
+    /* Tabs - horizontal scroll */
+    .tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .tab {
+        padding: 12px 15px;
+        font-size: 14px;
+        white-space: nowrap;
+        min-width: auto;
+        flex: 1;
+    }
+
+    /* Attendance buttons - mobile optimized */
+    .attendance-btn,
+    .attendance-choice-btn {
+        padding: 8px 12px !important;
+        font-size: 14px !important;
+        margin: 2px !important;
+        min-height: 44px;
+    }
+
+    /* Student item - horizontal layout */
+    .student-attendance-item {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+        padding: 15px !important;
+        margin-bottom: 10px !important;
+        border-radius: 10px !important;
+        background: #f8f9fa !important;
+        border-left: 4px solid #007bff !important;
+    }
+
+    .student-info {
+        flex: 1 !important;
+        margin-right: 10px !important;
+    }
+
+    .student-name {
+        font-size: 16px !important;
+        font-weight: 600 !important;
+        margin-bottom: 4px !important;
+        color: #333 !important;
+    }
+
+    .student-class {
+        font-size: 12px !important;
+        color: #666 !important;
+    }
+
+    .attendance-buttons {
+        display: flex !important;
+        gap: 4px !important;
+        flex-wrap: nowrap !important;
+    }
+
+    .attendance-choice-btn {
+        min-width: 50px !important;
+        padding: 8px 10px !important;
+        font-size: 12px !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        min-height: 44px !important;
+    }
+
+    /* Better button spacing on mobile */
+    .btn {
+        margin: 6px 4px;
+        padding: 12px 20px;
+    }
+
+    /* Notification - mobile position */
+    .notification {
+        right: 15px;
+        left: 15px;
+        top: 15px;
+    }
+}
+
+/* Print styles */
+@media print {
+    .tabs,
+    .btn,
+    .notification {
+        display: none !important;
+    }
+
+    .card {
+        break-inside: avoid;
+        box-shadow: none;
+        border: 1px solid #ddd;
+    }
+}

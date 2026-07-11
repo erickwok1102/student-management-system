@@ -1,6 +1,6 @@
 // 學員管理系統 Google Apps Script 完整修復版
 // 請替換以下 ID 為你的實際 Google Sheets ID
-const SPREADSHEET_ID = '1paCFt-QxJ3HjTrA4lOnZFQjuw2I7jh8KkTPiNSbfcoo';
+const SPREADSHEET_ID = '1paCFI-QxJ3HjTrA4IOnZFQjuw2I7jh8KkTPiNSbfcoo';
 
 // 工作表名稱配置 (使用英文名稱)
 const SHEETS = {
@@ -8,6 +8,11 @@ const SHEETS = {
   SCHEDULE: 'schedule',
   ATTENDANCE: 'attendance'
 };
+
+// 每月報表設定
+const REPORT_SHEET = 'monthly_report';
+const REPORT_TIMEZONE = 'Asia/Hong_Kong';
+const ATTENDANCE_PRESENT_STATUSES = ['出席', '遲到']; // 視為到課
 
 // 主要處理函數 - 處理 GET 請求
 function doGet(e) {
@@ -24,6 +29,8 @@ function doGet(e) {
         return getSchedule();
       case 'getAttendance':
         return getAttendance(e.parameter.date, e.parameter.className);
+      case 'generateMonthlyReport':
+        return generateMonthlyAttendanceReportFromParams(e.parameter.year, e.parameter.month);
       default:
         return createResponse({
           success: false,
@@ -60,6 +67,8 @@ function doPost(e) {
         return appendStudent(data.students);  // 新增學員函數
       case 'syncAttendance':
         return syncAttendanceFixed(data.attendance);  // 使用修復版函數
+      case 'updateStudentStatus':
+        return updateStudentStatus(data.studentId, data.status);
       default:
         return createResponse({
           success: false,
@@ -550,6 +559,206 @@ function syncAttendance(attendance) {
   return syncAttendanceFixed(attendance);
 }
 
+// 解析日期（支援 Date 物件與常見字串格式）
+function parseAttendanceDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+
+  const str = value.toString().trim();
+  if (!str) return null;
+
+  // YYYY-MM-DD 或 YYYY/MM/DD
+  let match = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+  if (match) {
+    const y = parseInt(match[1], 10);
+    const m = parseInt(match[2], 10) - 1;
+    const d = parseInt(match[3], 10);
+    return new Date(y, m, d);
+  }
+
+  // MM/DD/YYYY 或 M/D/YYYY
+  match = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+  if (match) {
+    const m = parseInt(match[1], 10) - 1;
+    const d = parseInt(match[2], 10);
+    const y = parseInt(match[3], 10);
+    return new Date(y, m, d);
+  }
+
+  return null;
+}
+
+// 產生上個月報表（供時間觸發器使用）
+function runMonthlyAttendanceReport() {
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+  const end = new Date(today.getFullYear(), today.getMonth(), 0);
+  return generateMonthlyAttendanceReport(start, end);
+}
+
+// 允許用 URL 參數手動生成報表
+function generateMonthlyAttendanceReportFromParams(year, month) {
+  if (!year || !month) {
+    return createResponse({ success: false, error: 'Missing year or month' });
+  }
+  const y = parseInt(year, 10);
+  const m = parseInt(month, 10);
+  if (!y || !m || m < 1 || m > 12) {
+    return createResponse({ success: false, error: 'Invalid year or month' });
+  }
+  const start = new Date(y, m - 1, 1);
+  const end = new Date(y, m, 0);
+  return generateMonthlyAttendanceReport(start, end);
+}
+
+// 核心：生成指定月份的出席報表與圖表
+function generateMonthlyAttendanceReport(startDate, endDate) {
+  try {
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const attendanceSheet = spreadsheet.getSheetByName(SHEETS.ATTENDANCE);
+
+    if (!attendanceSheet) {
+      return createResponse({ success: false, error: 'attendance 工作表不存在' });
+    }
+
+    const data = attendanceSheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      return createResponse({ success: true, message: '沒有出席記錄可生成報表' });
+    }
+
+    const monthLabel = Utilities.formatDate(startDate, REPORT_TIMEZONE, 'yyyy-MM');
+    const summaryMap = {};
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      const dateValue = parseAttendanceDate(row[0]);
+      if (!dateValue) continue;
+
+      if (dateValue < startDate || dateValue > endDate) continue;
+
+      const className = row[1] ? row[1].toString() : '';
+      const studentId = row[2] ? row[2].toString() : '';
+      const studentName = row[3] ? row[3].toString() : '';
+      const status = row[4] ? row[4].toString() : '';
+
+      if (!studentId) continue;
+
+      if (!summaryMap[studentId]) {
+        summaryMap[studentId] = {
+          month: monthLabel,
+          studentId: studentId,
+          studentName: studentName,
+          className: className,
+          present: 0,
+          late: 0,
+          absent: 0,
+          total: 0
+        };
+      }
+
+      summaryMap[studentId].total += 1;
+
+      if (status === '出席') summaryMap[studentId].present += 1;
+      else if (status === '遲到') summaryMap[studentId].late += 1;
+      else if (status === '缺席') summaryMap[studentId].absent += 1;
+    }
+
+    const rows = Object.values(summaryMap).sort((a, b) => {
+      if (a.className === b.className) return a.studentId.localeCompare(b.studentId);
+      return a.className.localeCompare(b.className);
+    });
+
+    const header = [
+      '月份',
+      '學員ID',
+      '學員姓名',
+      '班別',
+      '到課次數',
+      '出席次數',
+      '遲到次數',
+      '缺席次數',
+      '總點名次數'
+    ];
+
+    const output = [header].concat(
+      rows.map(r => ([
+        r.month,
+        r.studentId,
+        r.studentName,
+        r.className,
+        r.present + r.late,
+        r.present,
+        r.late,
+        r.absent,
+        r.total
+      ]))
+    );
+
+    let reportSheet = spreadsheet.getSheetByName(REPORT_SHEET);
+    if (!reportSheet) {
+      reportSheet = spreadsheet.insertSheet(REPORT_SHEET);
+    }
+
+    reportSheet.clear();
+    reportSheet.getRange(1, 1, output.length, output[0].length).setValues(output);
+    reportSheet.setFrozenRows(1);
+
+    // 清除舊圖表
+    reportSheet.getCharts().forEach(chart => reportSheet.removeChart(chart));
+
+    if (rows.length > 0) {
+      const nameRange = reportSheet.getRange(1, 3, output.length, 1);
+      const attendanceRange = reportSheet.getRange(1, 5, output.length, 1);
+
+      const chart = reportSheet.newChart()
+        .setChartType(Charts.ChartType.COLUMN)
+        .addRange(nameRange)
+        .addRange(attendanceRange)
+        .setPosition(1, 11, 0, 0)
+        .setOption('title', `上月到課次數 (${monthLabel})`)
+        .setOption('legend', { position: 'none' })
+        .setOption('hAxis', { title: '學員' })
+        .setOption('vAxis', { title: '到課次數' })
+        .build();
+
+      reportSheet.insertChart(chart);
+    }
+
+    return createResponse({
+      success: true,
+      month: monthLabel,
+      count: rows.length,
+      message: `已生成 ${monthLabel} 的出席報表 (${rows.length} 位學員)`
+    });
+
+  } catch (error) {
+    console.error('生成每月報表失敗:', error);
+    return createResponse({ success: false, error: error.toString() });
+  }
+}
+
+// 建立每月自動報表觸發器（每月1號早上6點）
+function createMonthlyReportTrigger() {
+  const triggers = ScriptApp.getProjectTriggers();
+  const exists = triggers.some(t => t.getHandlerFunction() === 'runMonthlyAttendanceReport');
+
+  if (!exists) {
+    ScriptApp.newTrigger('runMonthlyAttendanceReport')
+      .timeBased()
+      .onMonthDay(1)
+      .atHour(6)
+      .create();
+  }
+
+  return createResponse({
+    success: true,
+    message: '每月報表觸發器已建立 (每月1號 06:00)',
+    exists: exists
+  });
+}
+
 // 測試函數 - 可以在 Apps Script 編輯器中手動執行
 function testScript() {
   console.log('測試 Google Apps Script');
@@ -655,4 +864,60 @@ function appendStudent(students) {
       error: error.toString()
     });
   }
-} 
+}
+
+// 更新單一學員的狀態（用 ID 搵行，只改 status 一格）
+function updateStudentStatus(studentId, status) {
+  try {
+    console.log('更新學員狀態:', studentId, '->', status);
+
+    if (!studentId || !status) {
+      throw new Error('缺少 studentId 或 status');
+    }
+
+    const spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    const sheet = spreadsheet.getSheetByName(SHEETS.STUDENTS);
+
+    if (!sheet) {
+      throw new Error('學員資料工作表不存在');
+    }
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length <= 1) {
+      throw new Error('沒有學員資料');
+    }
+
+    // 用標題行搵 id 同 status 欄位位置，避免欄位順序改變時出錯
+    const headers = data[0].map(h => String(h).trim().toLowerCase());
+    const idCol = headers.indexOf('id');
+    const statusCol = headers.indexOf('status');
+
+    if (idCol === -1 || statusCol === -1) {
+      throw new Error('工作表缺少 id 或 status 標題欄');
+    }
+
+    for (let i = 1; i < data.length; i++) {
+      if (String(data[i][idCol]).trim() === String(studentId).trim()) {
+        sheet.getRange(i + 1, statusCol + 1).setValue(status);
+        console.log(`已更新第 ${i + 1} 行學員 ${studentId} 狀態為 ${status}`);
+
+        return createResponse({
+          success: true,
+          message: `學員 ${studentId} 狀態已更新為「${status}」`,
+          studentId: studentId,
+          status: status
+        });
+      }
+    }
+
+    throw new Error(`找不到學員 ID: ${studentId}`);
+
+  } catch (error) {
+    console.error('更新學員狀態失敗:', error);
+    return createResponse({
+      success: false,
+      error: error.toString()
+    });
+  }
+}
+
