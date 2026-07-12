@@ -1,4 +1,5 @@
 import { getSupabase, errorResponse } from '@/lib/supabaseServer';
+import { insertStudentWithGeneratedId } from '@/lib/createStudent';
 
 // GET /api/students - 攞學員列表（可選 ?class=青年班&status=在讀）
 export async function GET(request) {
@@ -47,40 +48,7 @@ export async function POST(request) {
             remarks: (body.remarks || '').trim()
         };
 
-        // 生成下一個 ID；如果同時有人新增撞咗 unique key，重試多兩次
-        let inserted = null;
-        let lastError = null;
-
-        for (let attempt = 0; attempt < 3; attempt++) {
-            const { data: ids, error: idError } = await supabase
-                .from('students')
-                .select('id')
-                .like('id', 'Y%');
-
-            if (idError) throw idError;
-
-            const maxNum = ids
-                .map(row => parseInt(row.id.substring(1), 10))
-                .filter(num => !isNaN(num))
-                .reduce((max, num) => Math.max(max, num), 0);
-
-            const newId = `Y${String(maxNum + 1).padStart(4, '0')}`;
-
-            const { data, error } = await supabase
-                .from('students')
-                .insert({ ...student, id: newId })
-                .select()
-                .single();
-
-            if (!error) {
-                inserted = data;
-                break;
-            }
-            if (error.code !== '23505') throw error; // 唔係撞 ID 就直接報錯
-            lastError = error;
-        }
-
-        if (!inserted) throw lastError || new Error('新增學員失敗');
+        const inserted = await insertStudentWithGeneratedId(supabase, student);
 
         return Response.json({ success: true, student: inserted });
     } catch (error) {

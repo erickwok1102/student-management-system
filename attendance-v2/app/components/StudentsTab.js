@@ -4,9 +4,10 @@ import { useState } from 'react';
 import { useNotification } from './Notification';
 import { api } from '../lib/api';
 
-const STUDENT_STATUS = ['在讀', '休學', '畢業', '退學'];
+const STUDENT_STATUS = ['待審核', '在讀', '休學', '畢業', '退學'];
 
 const STATUS_COLORS = {
+    '待審核': '#a78bfa',
     '在讀': '#34d399',
     '休學': '#fbbf24',
     '畢業': '#38bdf8',

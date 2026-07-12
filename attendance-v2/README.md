@@ -73,3 +73,46 @@ npm run dev
 ## 資料喺邊度睇
 
 Supabase Dashboard → **Table Editor**,似 Google Sheets 咁直接睇同改資料。
+
+---
+
+## WhatsApp 自動化（Green API）
+
+環境變數(`.env.local` 本地 + Vercel 都要加):
+
+| 變數 | 用途 |
+|---|---|
+| `GREEN_API_INSTANCE_ID` | Green API instance 號碼 |
+| `GREEN_API_TOKEN` | Green API token |
+| `GREEN_API_BIRTHDAY_GROUP_ID` | 每月1號生日名單 send 去邊個 group(`XXXX@g.us`,留空 = 唔send) |
+| `CRON_SECRET` | 保護 cron endpoint,Vercel 會自動帶佢做 Bearer token |
+| `SLACK_SIGNING_SECRET` | Slack app 嘅 Signing Secret |
+| `APP_BASE_URL` | 正式網址(登記 link 用),例如 `https://xxx.vercel.app` |
+
+### 生日自動祝賀
+
+Vercel Cron 每日 09:00 HKT 行 `/api/cron/birthday`:
+
+- 當日正日生日嘅**在讀**學員 → 逐個 WhatsApp DM 祝賀
+- 每月 **1 號** → 額外 send 成個月生日名單去 `GREEN_API_BIRTHDAY_GROUP_ID` 個 group
+
+測試(唔會真係send):
+```
+curl -H "Authorization: Bearer $CRON_SECRET" "https://你個domain/api/cron/birthday?dryRun=1"
+```
+
+### 家長自助登記
+
+公開頁面 `/register`。家長填完 → 學員以「**待審核**」狀態入資料庫 → 你喺學員 tab 個狀態 dropdown 轉做「在讀」就完成審批。
+
+### Slack 邀請設定(一次性)
+
+1. 去 [api.slack.com/apps](https://api.slack.com/apps) → **Create New App** → From scratch,揀你 workspace
+2. 左邊 **Slash Commands** → **Create New Command**:
+   - Command: `/邀請`(或 `/invite`)
+   - Request URL: `https://你個domain/api/slack/invite`
+   - Short Description: `WhatsApp send 學員登記 link 俾家長`
+3. 左邊 **Basic Information** → 抄 **Signing Secret** → 加落 Vercel 環境變數 `SLACK_SIGNING_SECRET`
+4. **Install App** 裝落 workspace
+
+用法:喺任何 channel 打 `/邀請 91234567`,團隊 WhatsApp 就會自動 send 登記 link 俾嗰個號碼。
