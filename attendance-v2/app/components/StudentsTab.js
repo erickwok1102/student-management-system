@@ -101,8 +101,34 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
         return counts;
     }, {});
 
+    // 本月生日（在讀學員，birthday 格式 YYYY-MM-DD，只用月/日）
+    const thisMonth = new Date().getMonth() + 1;
+    const birthdayStudents = students
+        .filter(s =>
+            s.status === '在讀' &&
+            (s.birthday || '').length >= 10 &&
+            parseInt(s.birthday.slice(5, 7), 10) === thisMonth
+        )
+        .map(s => ({ ...s, birthDay: parseInt(s.birthday.slice(8, 10), 10) }))
+        .sort((a, b) => a.birthDay - b.birthDay);
+
     return (
         <>
+            {birthdayStudents.length > 0 && (
+                <div className="card birthday-card">
+                    <h3 className="card-title" style={{ marginBottom: 14 }}>🎂 {thisMonth} 月生日</h3>
+                    <div className="birthday-list">
+                        {birthdayStudents.map(s => (
+                            <span key={s.id} className="birthday-chip">
+                                {thisMonth}月{s.birthDay}日 · {s.name}
+                                {s.nickname && ` (${s.nickname})`}
+                                <span className="birthday-chip-class">{s.class}</span>
+                            </span>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <div className="stats-grid">
                 <div className="stat-card">
                     <div className="stat-number">{students.length}</div>

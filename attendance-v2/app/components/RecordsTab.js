@@ -82,14 +82,20 @@ export default function RecordsTab({ classes }) {
 
     const chartSubtitle = `${from} 至 ${to}${className ? ` · ${className}` : ' · 全部班別'}`;
 
-    /** 將圖表畫上 canvas，返回 canvas（分享/下載用） */
+    /** 將圖表畫上 canvas，返回 canvas（分享/下載用）。直柱橫排，一張圖睇晒所有人。 */
     function drawChartCanvas() {
         const scale = 2; // retina 清晰度
-        const width = 1000;
-        const headerH = 120;
-        const rowH = 42;
-        const footerH = 36;
-        const height = headerH + chartRows.length * rowH + footerH;
+        const n = chartRows.length;
+        const marginX = 28;
+        const colGap = 6;
+        // 人多時自動加闊張圖，柱寬keep住最少 22px
+        const colW = Math.max(22, Math.min(52, Math.floor((1000 - marginX * 2) / n) - colGap));
+        const width = Math.max(1000, marginX * 2 + n * (colW + colGap));
+        const headerH = 118;
+        const plotH = 240;
+        const nameH = 84;
+        const footerH = 34;
+        const height = headerH + 20 + plotH + nameH + footerH;
 
         const canvas = document.createElement('canvas');
         canvas.width = width * scale;
@@ -106,13 +112,13 @@ export default function RecordsTab({ classes }) {
         // 標題 + 副題
         ctx.fillStyle = '#e9edf5';
         ctx.font = `700 24px ${font}`;
-        ctx.fillText('學員出席統計', 28, 44);
+        ctx.fillText('學員出席統計', marginX, 44);
         ctx.fillStyle = '#8b95ab';
         ctx.font = `400 14px ${font}`;
-        ctx.fillText(chartSubtitle, 28, 70);
+        ctx.fillText(chartSubtitle, marginX, 70);
 
         // 圖例
-        let legendX = 28;
+        let legendX = marginX;
         CHART_STATUSES.forEach(status => {
             ctx.fillStyle = CHART_COLORS[status];
             ctx.beginPath();
@@ -124,50 +130,57 @@ export default function RecordsTab({ classes }) {
             legendX += 19 + ctx.measureText(status).width + 22;
         });
 
-        // 每行 bar
-        const barX = 190;
-        const barW = width - barX - 90;
+        const plotTop = headerH + 20;
+        const plotBottom = plotTop + plotH;
+
         chartRows.forEach((row, i) => {
-            const y = headerH + i * rowH;
+            const x = marginX + i * (colW + colGap);
 
-            // 名 + 堂數
+            // 出席率（柱頂）
             ctx.fillStyle = '#e9edf5';
-            ctx.font = `600 14px ${font}`;
-            const name = row.name.length > 6 ? row.name.slice(0, 6) + '…' : row.name;
-            ctx.fillText(name, 28, y + 22);
-            ctx.fillStyle = '#5b6478';
-            ctx.font = `400 11px ${font}`;
-            ctx.fillText(`${row.total}堂`, 145, y + 22);
+            ctx.textAlign = 'center';
+            if (colW >= 30) {
+                ctx.font = `700 12px ${font}`;
+                ctx.fillText(`${row.rate}%`, x + colW / 2, plotTop - 8);
+            } else {
+                ctx.font = `700 11px ${font}`;
+                ctx.fillText(String(row.rate), x + colW / 2, plotTop - 8);
+            }
 
-            // stacked segments（2px 間隔，最尾圓角）
-            let segX = barX;
+            // 由下而上疊：出席 → 遲到 → 缺席，2px 間隔，最頂圓角
             const segments = CHART_STATUSES
                 .map(status => ({ status, count: row[status] }))
                 .filter(seg => seg.count > 0);
+            const gapTotal = (segments.length - 1) * 2;
+            let segBottom = plotBottom;
 
             segments.forEach((seg, sIdx) => {
-                const gapTotal = (segments.length - 1) * 2;
-                const segW = (seg.count / row.total) * (barW - gapTotal);
-                const isLast = sIdx === segments.length - 1;
+                const segH = (seg.count / row.total) * (plotH - gapTotal);
+                const isTop = sIdx === segments.length - 1;
                 ctx.fillStyle = CHART_COLORS[seg.status];
                 ctx.beginPath();
-                ctx.roundRect(segX, y + 8, segW, 18, isLast ? [0, 4, 4, 0] : 0);
+                ctx.roundRect(x, segBottom - segH, colW, segH, isTop ? [4, 4, 0, 0] : 0);
                 ctx.fill();
-                segX += segW + 2;
+                segBottom -= segH + 2;
             });
 
-            // 出席率
-            ctx.fillStyle = '#e9edf5';
-            ctx.font = `700 14px ${font}`;
-            ctx.textAlign = 'right';
-            ctx.fillText(`${row.rate}%`, width - 28, y + 22);
+            // 名（直寫）+ 堂數
+            ctx.fillStyle = '#c6cddb';
+            ctx.font = `500 12px ${font}`;
+            const chars = row.name.replace(/\s/g, '').slice(0, 4).split('');
+            chars.forEach((ch, ci) => {
+                ctx.fillText(ch, x + colW / 2, plotBottom + 18 + ci * 15);
+            });
+            ctx.fillStyle = '#5b6478';
+            ctx.font = `400 10px ${font}`;
+            ctx.fillText(`${row.total}`, x + colW / 2, plotBottom + 18 + chars.length * 15 + 2);
             ctx.textAlign = 'left';
         });
 
         // footer
         ctx.fillStyle = '#5b6478';
         ctx.font = `400 11px ${font}`;
-        ctx.fillText(`出席率 = (出席 + 遲到) ÷ 總堂數 · 產生於 ${todayString()}`, 28, height - 14);
+        ctx.fillText(`出席率 = (出席 + 遲到) ÷ 總堂數 · 名下數字為總堂數 · 產生於 ${todayString()}`, marginX, height - 12);
 
         return canvas;
     }
@@ -281,31 +294,34 @@ export default function RecordsTab({ classes }) {
                                             出席率 = (出席+遲到) ÷ 總堂數
                                         </span>
                                     </div>
-                                    {chartRows.map(row => (
-                                        <div key={row.id} className="chart-row">
-                                            <div className="chart-row-label">
-                                                {row.name}
-                                                <span className="chart-row-total">{row.total}堂</span>
+                                    <div className="chart-columns">
+                                        {chartRows.map(row => (
+                                            <div
+                                                key={row.id}
+                                                className="chart-col"
+                                                title={`${row.name} · 出席${row.出席} 遲到${row.遲到} 缺席${row.缺席} · 共${row.total}堂 · ${row.rate}%`}
+                                            >
+                                                <div className="chart-col-rate">{row.rate}</div>
+                                                <div className="chart-col-bar">
+                                                    {[...CHART_STATUSES].reverse()
+                                                        .map(status => ({ status, count: row[status] }))
+                                                        .filter(seg => seg.count > 0)
+                                                        .map(seg => (
+                                                            <div
+                                                                key={seg.status}
+                                                                className="chart-col-seg"
+                                                                style={{
+                                                                    flexGrow: seg.count,
+                                                                    background: CHART_COLORS[seg.status]
+                                                                }}
+                                                            />
+                                                        ))}
+                                                </div>
+                                                <div className="chart-col-name">{row.name.replace(/\s/g, '').slice(0, 4)}</div>
                                             </div>
-                                            <div className="chart-bar">
-                                                {CHART_STATUSES
-                                                    .map(status => ({ status, count: row[status] }))
-                                                    .filter(seg => seg.count > 0)
-                                                    .map(seg => (
-                                                        <div
-                                                            key={seg.status}
-                                                            className="chart-seg"
-                                                            title={`${row.name} · ${seg.status} ${seg.count} 堂`}
-                                                            style={{
-                                                                flexGrow: seg.count,
-                                                                background: CHART_COLORS[seg.status]
-                                                            }}
-                                                        />
-                                                    ))}
-                                            </div>
-                                            <div className="chart-row-rate">{row.rate}%</div>
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
+                                    <div className="hint-text">柱頂數字 = 出席率 %,掂/hover 每條柱睇詳細</div>
                                 </div>
                             )}
                         </div>
