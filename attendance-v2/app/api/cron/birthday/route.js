@@ -26,7 +26,11 @@ export async function GET(request) {
         }
 
         const { searchParams } = new URL(request.url);
-        const dryRun = searchParams.get('dryRun') === '1';
+
+        // 總開關：BIRTHDAY_AUTOMATION_ENABLED 唔係 'true' 就永遠只綵排、唔會真 send
+        // （即係就算 cron 每日照行，都只係回報「本應 send 乜」）
+        const enabled = process.env.BIRTHDAY_AUTOMATION_ENABLED === 'true';
+        const dryRun = !enabled || searchParams.get('dryRun') === '1';
 
         const today = hktToday();
         const supabase = getSupabase();
@@ -109,6 +113,7 @@ export async function GET(request) {
         return Response.json({
             success: true,
             date: `${today.mm}-${today.dd}`,
+            enabled,
             dryRun,
             todayBirthdayCount: todayBirthdays.length,
             dms: dmResults,
