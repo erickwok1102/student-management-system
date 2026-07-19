@@ -705,6 +705,89 @@ body {
     font-weight: 400;
 }
 
+/* ===== 家長報名頁：白底大字版 =====
+   淨係 /register 用，管理系統照舊暗色 */
+.register-page {
+    min-height: 100dvh;
+    background: #f5f7fa;
+    color: #1f2937;
+}
+
+.register-page .header h1 {
+    background: none;
+    -webkit-text-fill-color: initial;
+    color: #111827;
+    font-size: 2.1rem;
+}
+
+.register-page .card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    box-shadow: 0 2px 14px rgba(15, 23, 42, 0.06);
+    backdrop-filter: none;
+}
+
+.register-page .hint-text {
+    color: #4b5563;
+    font-size: 17px;
+    line-height: 1.8;
+}
+
+.register-page .form-group label {
+    color: #374151;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0.3px;
+    margin-bottom: 10px;
+}
+
+.register-page .form-group input,
+.register-page .form-group select,
+.register-page .form-group textarea {
+    background: #ffffff;
+    border: 2px solid #d1d5db;
+    color: #111827;
+    font-size: 18px;
+    padding: 16px 18px;
+    color-scheme: light;
+}
+
+.register-page .form-group input::placeholder,
+.register-page .form-group textarea::placeholder {
+    color: #9ca3af;
+}
+
+.register-page .form-group input:focus,
+.register-page .form-group select:focus,
+.register-page .form-group textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px rgba(109, 141, 255, 0.18);
+}
+
+.register-page .btn {
+    font-size: 18px;
+    padding: 16px 30px;
+    min-height: 54px;
+}
+
+.register-page h2 {
+    color: #111827;
+    font-size: 26px;
+}
+
+.register-success-text {
+    color: #4b5563;
+    line-height: 1.9;
+    font-size: 17px;
+}
+
+@media (max-width: 768px) {
+    .register-page .header h1 {
+        font-size: 1.8rem;
+    }
+}
+
 /* Error banner */
 .error-banner {
     border-left: 3px solid var(--danger) !important;

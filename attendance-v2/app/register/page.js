@@ -58,23 +58,26 @@ export default function RegisterPage() {
 
     if (done) {
         return (
-            <div className="container" style={{ maxWidth: 640 }}>
-                <div className="header">
-                    <h1>學員登記</h1>
-                </div>
-                <div className="card" style={{ textAlign: 'center', padding: '56px 30px' }}>
-                    <div style={{ fontSize: 56, marginBottom: 18 }}>✅</div>
-                    <h2 style={{ marginBottom: 12 }}>登記成功！</h2>
-                    <p style={{ color: 'var(--text-muted)', lineHeight: 1.8 }}>
-                        我哋已經收到「{form.name.trim()}」嘅資料。<br />
-                        導師核實之後會盡快聯絡你，多謝支持！
-                    </p>
+            <div className="register-page">
+                <div className="container" style={{ maxWidth: 640 }}>
+                    <div className="header">
+                        <h1>學員登記</h1>
+                    </div>
+                    <div className="card" style={{ textAlign: 'center', padding: '56px 30px' }}>
+                        <div style={{ fontSize: 56, marginBottom: 18 }}>✅</div>
+                        <h2 style={{ marginBottom: 12 }}>登記成功！</h2>
+                        <p className="register-success-text">
+                            我哋已經收到「{form.name.trim()}」嘅資料。<br />
+                            導師核實之後會盡快聯絡你，多謝支持！
+                        </p>
+                    </div>
                 </div>
             </div>
         );
     }
 
     return (
+        <div className="register-page">
         <div className="container" style={{ maxWidth: 640 }}>
             <div className="header">
                 <h1>學員登記</h1>
@@ -162,6 +165,7 @@ export default function RegisterPage() {
                     </div>
                 </form>
             </div>
+        </div>
         </div>
     );
 }
