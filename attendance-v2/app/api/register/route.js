@@ -26,15 +26,16 @@ export async function POST(request) {
 
         const supabase = getSupabase();
 
-        // 確認班別真係存在（防止亂填）
+        // 確認班別存在而且開放俾家長登記（防止亂填/直接打 API 揀內部班）
         const { data: classRow, error: classError } = await supabase
             .from('classes')
             .select('name')
             .eq('name', className)
+            .eq('open_for_registration', true)
             .maybeSingle();
 
         if (classError) throw classError;
-        if (!classRow) return errorResponse('班別唔存在，請重新選擇', 400);
+        if (!classRow) return errorResponse('班別唔存在或者唔接受網上登記，請重新選擇', 400);
 
         const student = {
             name,

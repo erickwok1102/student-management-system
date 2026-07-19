@@ -16,7 +16,7 @@ export default function RegisterPage() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        fetch('/api/classes')
+        fetch('/api/classes?registration=1')
             .then(res => res.json())
             .then(result => { if (result.success) setClasses(result.classes); })
             .catch(() => {});
