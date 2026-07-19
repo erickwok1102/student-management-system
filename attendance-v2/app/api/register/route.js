@@ -1,5 +1,6 @@
 import { getSupabase, errorResponse } from '@/lib/supabaseServer';
 import { insertStudentWithGeneratedId } from '@/lib/createStudent';
+import { notifySlack } from '@/lib/slack';
 
 // POST /api/register - 家長自助登記（公開 endpoint）
 // 新登記一律入「待審核」狀態，管理員喺學員 tab 過目先轉「在讀」
@@ -51,6 +52,17 @@ export async function POST(request) {
         };
 
         const inserted = await insertStudentWithGeneratedId(supabase, student);
+
+        // 通知 Slack（失敗唔影響登記）
+        const nick = inserted.nickname ? ` (${inserted.nickname})` : '';
+        await notifySlack(
+            `🆕 有新學員登記！\n\n` +
+            `*${inserted.name}*${nick} · ${inserted.class}\n` +
+            `📞 ${inserted.phone}` +
+            (inserted.birthday ? ` · 🎂 ${inserted.birthday}` : '') +
+            `\nID: ${inserted.id} · 狀態: 待審核\n\n` +
+            `記得去學員管理系統將佢轉做「在讀」完成審批 ✅`
+        );
 
         return Response.json({
             success: true,
