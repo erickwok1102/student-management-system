@@ -62,6 +62,7 @@ export default function RegisterPage() {
                 <div className="container" style={{ maxWidth: 640 }}>
                     <div className="header">
                         <h1>學員登記</h1>
+                        <p className="header-org">溢安體育會 🐲🦁</p>
                     </div>
                     <div className="card" style={{ textAlign: 'center', padding: '56px 30px' }}>
                         <div style={{ fontSize: 56, marginBottom: 18 }}>✅</div>
@@ -81,6 +82,7 @@ export default function RegisterPage() {
         <div className="container" style={{ maxWidth: 640 }}>
             <div className="header">
                 <h1>學員登記</h1>
+                <p className="header-org">溢安體育會 🐲🦁</p>
             </div>
 
             <div className="card">

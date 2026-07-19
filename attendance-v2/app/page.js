@@ -49,6 +49,7 @@ export default function Home() {
             <div className="container">
                 <div className="header">
                     <h1>學員管理系統</h1>
+                    <p className="header-org">溢安體育會 🐲🦁</p>
                 </div>
 
                 {loadError && (

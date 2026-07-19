@@ -63,6 +63,19 @@ body {
     display: inline-block;
 }
 
+.header-org {
+    margin-top: 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-muted);
+    letter-spacing: 1.5px;
+}
+
+.register-page .header-org {
+    color: #6b7280;
+    font-size: 17px;
+}
+
 /* Cards */
 .card {
     background: var(--surface);
