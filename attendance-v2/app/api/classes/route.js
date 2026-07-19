@@ -10,7 +10,7 @@ export async function GET(request) {
         const supabase = getSupabase();
         let query = supabase
             .from('classes')
-            .select('id, name, sort_order')
+            .select('id, name, sort_order, open_for_registration, show_in_attendance')
             .order('sort_order')
             .order('name');
 

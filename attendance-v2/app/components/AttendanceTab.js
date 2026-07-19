@@ -147,9 +147,11 @@ export default function AttendanceTab({ classes, students }) {
                             disabled={!date}
                         >
                             <option value="">請選擇班別</option>
-                            {classes.map(c => (
-                                <option key={c.id} value={c.name}>{c.name}</option>
-                            ))}
+                            {classes
+                                .filter(c => c.show_in_attendance !== false)
+                                .map(c => (
+                                    <option key={c.id} value={c.name}>{c.name}</option>
+                                ))}
                         </select>
                     </div>
                 </div>
