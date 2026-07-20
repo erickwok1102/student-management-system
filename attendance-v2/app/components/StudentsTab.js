@@ -28,6 +28,9 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
     const [editingId, setEditingId] = useState(null);
     const [editForm, setEditForm] = useState(EMPTY_FORM);
     const [savingEdit, setSavingEdit] = useState(false);
+    const [filterClass, setFilterClass] = useState('');
+    const [filterStatus, setFilterStatus] = useState('');
+    const [sortOrder, setSortOrder] = useState('newest');
 
     function setField(field, value) {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -145,6 +148,20 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
         counts[s.status] = (counts[s.status] || 0) + 1;
         return counts;
     }, {});
+
+    // 學員列表：篩選 + 排序（預設新至舊）
+    const idNum = id => parseInt(String(id).replace(/\D/g, ''), 10) || 0;
+    const visibleStudents = students
+        .filter(s => (!filterClass || s.class === filterClass) && (!filterStatus || s.status === filterStatus))
+        .sort((a, b) => {
+            if (sortOrder === 'newest') {
+                return String(b.created_at).localeCompare(String(a.created_at)) || idNum(b.id) - idNum(a.id);
+            }
+            if (sortOrder === 'oldest') {
+                return String(a.created_at).localeCompare(String(b.created_at)) || idNum(a.id) - idNum(b.id);
+            }
+            return idNum(a.id) - idNum(b.id); // ID 順序
+        });
 
     // 本月生日（在讀學員，birthday 格式 YYYY-MM-DD，只用月/日）
     const thisMonth = new Date().getMonth() + 1;
@@ -272,14 +289,37 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
             </div>
 
             <div className="card">
-                <h3 className="card-title">學員列表 ({students.length})</h3>
-                {students.length === 0 ? (
+                <h3 className="card-title">
+                    學員列表 ({visibleStudents.length}{visibleStudents.length !== students.length ? ` / ${students.length}` : ''})
+                </h3>
+
+                <div className="student-filters">
+                    <select className="status-select" value={filterClass} onChange={e => setFilterClass(e.target.value)}>
+                        <option value="">全部班別</option>
+                        {classes.map(c => (
+                            <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                    </select>
+                    <select className="status-select" value={filterStatus} onChange={e => setFilterStatus(e.target.value)}>
+                        <option value="">全部狀態</option>
+                        {STUDENT_STATUS.map(status => (
+                            <option key={status} value={status}>{status}</option>
+                        ))}
+                    </select>
+                    <select className="status-select" value={sortOrder} onChange={e => setSortOrder(e.target.value)}>
+                        <option value="newest">新至舊</option>
+                        <option value="oldest">舊至新</option>
+                        <option value="id">ID 順序</option>
+                    </select>
+                </div>
+
+                {visibleStudents.length === 0 ? (
                     <div className="empty-state">
-                        <h3>還沒有學員資料</h3>
-                        <p>用上面的表單新增學員</p>
+                        <h3>{students.length === 0 ? '還沒有學員資料' : '呢個篩選條件冇學員'}</h3>
+                        <p>{students.length === 0 ? '用上面的表單新增學員' : '試下轉返「全部班別 / 全部狀態」'}</p>
                     </div>
                 ) : (
-                    students.map(student => (
+                    visibleStudents.map(student => (
                         editingId === student.id ? (
                             <div key={student.id} className="student-item" style={{ display: 'block' }}>
                                 <div className="student-item-name" style={{ marginBottom: 16 }}>

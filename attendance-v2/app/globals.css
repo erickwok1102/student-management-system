@@ -688,6 +688,20 @@ body {
     }
 }
 
+/* Student list filters */
+.student-filters {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+
+.student-filters .status-select {
+    padding: 10px 14px;
+    font-size: 14px;
+    border-radius: 10px;
+}
+
 /* Birthday card */
 .birthday-card {
     border-left: 3px solid var(--warning);
