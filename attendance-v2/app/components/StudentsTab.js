@@ -25,6 +25,9 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
     const [form, setForm] = useState(EMPTY_FORM);
     const [submitting, setSubmitting] = useState(false);
     const [newClassName, setNewClassName] = useState('');
+    const [editingId, setEditingId] = useState(null);
+    const [editForm, setEditForm] = useState(EMPTY_FORM);
+    const [savingEdit, setSavingEdit] = useState(false);
 
     function setField(field, value) {
         setForm(prev => ({ ...prev, [field]: value }));
@@ -78,6 +81,47 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
             await reloadStudents();
         } catch (error) {
             showNotification(`刪除失敗：${error.message}`, 'error');
+        }
+    }
+
+    function startEdit(student) {
+        setEditingId(student.id);
+        setEditForm({
+            name: student.name || '',
+            nickname: student.nickname || '',
+            class: student.class || '',
+            phone: student.phone || '',
+            email: student.email || '',
+            birthday: student.birthday || '',
+            emergency_contact: student.emergency_contact || '',
+            emergency_phone: student.emergency_phone || '',
+            remarks: student.remarks || ''
+        });
+    }
+
+    function setEditField(field, value) {
+        setEditForm(prev => ({ ...prev, [field]: value }));
+    }
+
+    async function saveEdit(student) {
+        if (!editForm.name.trim()) {
+            showNotification('學員姓名唔可以留空', 'error');
+            return;
+        }
+
+        setSavingEdit(true);
+        try {
+            await api(`/api/students/${student.id}`, {
+                method: 'PATCH',
+                body: editForm
+            });
+            showNotification(`「${editForm.name}」資料已更新`, 'success');
+            setEditingId(null);
+            await reloadStudents();
+        } catch (error) {
+            showNotification(`更新失敗：${error.message}`, 'error');
+        } finally {
+            setSavingEdit(false);
         }
     }
 
@@ -236,6 +280,74 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
                     </div>
                 ) : (
                     students.map(student => (
+                        editingId === student.id ? (
+                            <div key={student.id} className="student-item" style={{ display: 'block' }}>
+                                <div className="student-item-name" style={{ marginBottom: 16 }}>
+                                    編輯學員 <span className="student-item-id">ID: {student.id}</span>
+                                </div>
+                                <div className="grid-form">
+                                    <div className="form-group">
+                                        <label>學員姓名 *</label>
+                                        <input type="text" value={editForm.name}
+                                            onChange={e => setEditField('name', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>別名/英文名</label>
+                                        <input type="text" value={editForm.nickname}
+                                            onChange={e => setEditField('nickname', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>班別</label>
+                                        <select value={editForm.class} onChange={e => setEditField('class', e.target.value)}>
+                                            {classes.map(c => (
+                                                <option key={c.id} value={c.name}>{c.name}</option>
+                                            ))}
+                                            {!classes.some(c => c.name === editForm.class) && editForm.class && (
+                                                <option value={editForm.class}>{editForm.class}</option>
+                                            )}
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <label>聯絡電話</label>
+                                        <input type="tel" value={editForm.phone}
+                                            onChange={e => setEditField('phone', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>電子信箱</label>
+                                        <input type="email" value={editForm.email}
+                                            onChange={e => setEditField('email', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>生日</label>
+                                        <input type="date" value={editForm.birthday}
+                                            onChange={e => setEditField('birthday', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>緊急聯絡人</label>
+                                        <input type="text" value={editForm.emergency_contact}
+                                            onChange={e => setEditField('emergency_contact', e.target.value)} />
+                                    </div>
+                                    <div className="form-group">
+                                        <label>緊急聯絡電話</label>
+                                        <input type="tel" value={editForm.emergency_phone}
+                                            onChange={e => setEditField('emergency_phone', e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label>備註</label>
+                                    <textarea rows={2} value={editForm.remarks}
+                                        onChange={e => setEditField('remarks', e.target.value)} />
+                                </div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <button className="btn btn-success" onClick={() => saveEdit(student)} disabled={savingEdit}>
+                                        {savingEdit ? '儲存中...' : '儲存變更'}
+                                    </button>
+                                    <button className="btn btn-warning" onClick={() => setEditingId(null)} disabled={savingEdit}>
+                                        取消
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
                         <div key={student.id} className="student-item">
                             <div>
                                 <div className="student-item-name">
@@ -278,11 +390,15 @@ export default function StudentsTab({ classes, students, reloadStudents, reloadC
                                 )}
                             </div>
                             <div>
+                                <button className="btn btn-primary btn-sm" onClick={() => startEdit(student)}>
+                                    編輯
+                                </button>
                                 <button className="btn btn-danger btn-sm" onClick={() => deleteStudent(student)}>
                                     刪除
                                 </button>
                             </div>
                         </div>
+                        )
                     ))
                 )}
             </div>
